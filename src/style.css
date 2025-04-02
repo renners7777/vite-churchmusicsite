@@ -89,3 +89,22 @@ main:focus {
     @apply mb-2;
   }
 }
+
+/* When the screen size goes below 500px the "St. Timothy's Church Music" text overlaps with the "Songs" and "Add Song" links. I want to ensure that this does not happen */
+@media (max-width: 500px) {
+  .header {
+    @apply flex flex-col items-center;
+  }
+
+  .header h1 {
+    @apply text-center;
+  }
+
+  .header nav {
+    @apply flex flex-col items-center;
+  }
+
+  .header nav a {
+    @apply mb-2;
+  }
+}
