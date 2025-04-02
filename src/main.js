@@ -13,6 +13,7 @@ const app = document.querySelector('#app')
 
 // Auth state
 let currentUser = null
+let searchQuery = ''
 
 // Auth components
 function LoginForm() {
@@ -73,6 +74,7 @@ function Header() {
   const navLinks = currentUser
     ? `
       <li><a href="#songs" class="hover:text-blue-200 focus:outline-none focus:ring-2 focus:ring-blue-300 rounded">Songs</a></li>
+      <li><a href="#playlists" class="hover:text-blue-200 focus:outline-none focus:ring-2 focus:ring-blue-300 rounded">My Playlists</a></li>
       <li><a href="#add-song" class="hover:text-blue-200 focus:outline-none focus:ring-2 focus:ring-blue-300 rounded">Add Song</a></li>
     `
     : ''
@@ -98,7 +100,7 @@ function Header() {
   `
 }
 
-// Songs list component
+// Songs list component with search
 async function SongsList() {
   if (!currentUser) {
     return `
@@ -109,10 +111,34 @@ async function SongsList() {
     `
   }
 
-  const { data: songs, error } = await supabase
+  const { data: playlists } = await supabase
+    .from('playlists')
+    .select('id, name')
+    .eq('user_id', currentUser.id)
+
+  const searchBar = `
+    <div class="mb-6">
+      <input 
+        type="text" 
+        id="song-search" 
+        placeholder="Search songs..." 
+        class="input w-full max-w-md"
+        value="${searchQuery}"
+        oninput="handleSearchInput(event)"
+      />
+    </div>
+  `
+
+  let query = supabase
     .from('songs')
     .select('*')
     .order('title')
+
+  if (searchQuery) {
+    query = query.ilike('title', `%${searchQuery}%`)
+  }
+
+  const { data: songs, error } = await query
 
   if (error) {
     return `<div role="alert" class="bg-red-100 text-red-700 p-4 rounded">Error loading songs: ${error.message}</div>`
@@ -121,12 +147,34 @@ async function SongsList() {
   return `
     <section aria-labelledby="songs-heading" class="container mx-auto p-4">
       <h2 id="songs-heading" class="text-3xl font-bold mb-6">Worship Songs</h2>
+      ${searchBar}
       <div class="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         ${songs.map(song => `
           <article class="song-card">
             <div class="flex justify-between items-start mb-2">
               <h3 class="text-xl font-semibold">${song.title}</h3>
               <div class="flex space-x-2">
+                ${playlists?.length ? `
+                  <div class="relative">
+                    <button 
+                      onclick="togglePlaylistDropdown(${song.id})" 
+                      class="text-blue-600 hover:text-blue-800"
+                      aria-label="Add to playlist"
+                    >
+                      ➕
+                    </button>
+                    <div id="playlist-dropdown-${song.id}" class="hidden absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg z-10">
+                      ${playlists.map(playlist => `
+                        <button
+                          onclick="addSongToPlaylist(${song.id}, '${playlist.id}')"
+                          class="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                        >
+                          ${playlist.name}
+                        </button>
+                      `).join('')}
+                    </div>
+                  </div>
+                ` : ''}
                 <button onclick="handleEditSong(${song.id})" class="text-blue-600 hover:text-blue-800">
                   <span class="sr-only">Edit ${song.title}</span>
                   ✏️
@@ -163,6 +211,83 @@ async function SongsList() {
                 ></textarea>
                 <button type="submit" class="button mt-2">Submit Comment</button>
               </form>
+            </div>
+          </article>
+        `).join('')}
+      </div>
+    </section>
+  `
+}
+
+// Playlists component
+async function PlaylistsView() {
+  if (!currentUser) {
+    return `
+      <div class="text-center p-8">
+        <h2 class="text-2xl font-bold mb-4">Please login to view playlists</h2>
+        <a href="#login" class="button">Login</a>
+      </div>
+    `
+  }
+
+  const { data: playlists, error } = await supabase
+    .from('playlists')
+    .select(`
+      *,
+      playlist_songs (
+        songs (
+          id,
+          title,
+          author
+        )
+      )
+    `)
+    .eq('user_id', currentUser.id)
+
+  if (error) {
+    return `<div role="alert" class="bg-red-100 text-red-700 p-4 rounded">Error loading playlists: ${error.message}</div>`
+  }
+
+  return `
+    <section class="container mx-auto p-4">
+      <div class="flex justify-between items-center mb-6">
+        <h2 class="text-3xl font-bold">My Playlists</h2>
+        <button onclick="handleCreatePlaylist()" class="button">Create New Playlist</button>
+      </div>
+      <div class="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+        ${playlists.map(playlist => `
+          <article class="bg-white rounded-lg shadow-md p-6">
+            <div class="flex justify-between items-start mb-4">
+              <h3 class="text-xl font-semibold">${playlist.name}</h3>
+              <div class="flex space-x-2">
+                <button onclick="handleEditPlaylist('${playlist.id}')" class="text-blue-600 hover:text-blue-800">
+                  <span class="sr-only">Edit ${playlist.name}</span>
+                  ✏️
+                </button>
+                <button onclick="handleDeletePlaylist('${playlist.id}')" class="text-red-600 hover:text-red-800">
+                  <span class="sr-only">Delete ${playlist.name}</span>
+                  🗑️
+                </button>
+              </div>
+            </div>
+            ${playlist.description ? `<p class="text-gray-600 mb-4">${playlist.description}</p>` : ''}
+            <div class="mt-4">
+              <h4 class="font-semibold mb-2">Songs</h4>
+              ${playlist.playlist_songs?.length ? `
+                <ul class="space-y-2">
+                  ${playlist.playlist_songs.map(ps => `
+                    <li class="flex justify-between items-center">
+                      <span>${ps.songs.title} - ${ps.songs.author || 'Unknown'}</span>
+                      <button 
+                        onclick="removeSongFromPlaylist('${playlist.id}', ${ps.songs.id})"
+                        class="text-red-600 hover:text-red-800"
+                      >
+                        ✕
+                      </button>
+                    </li>
+                  `).join('')}
+                </ul>
+              ` : '<p class="text-gray-500">No songs added yet</p>'}
             </div>
           </article>
         `).join('')}
@@ -385,6 +510,120 @@ window.handleDeleteSong = async (songId) => {
   renderApp()
 }
 
+// Playlist management handlers
+window.handleCreatePlaylist = async () => {
+  const name = prompt('Enter playlist name:')
+  if (!name) return
+
+  const description = prompt('Enter playlist description (optional):')
+
+  const { error } = await supabase
+    .from('playlists')
+    .insert([
+      {
+        name,
+        description,
+        user_id: currentUser.id
+      }
+    ])
+
+  if (error) {
+    alert('Error creating playlist: ' + error.message)
+    return
+  }
+
+  renderApp()
+}
+
+window.handleEditPlaylist = async (playlistId) => {
+  const { data: playlist, error: fetchError } = await supabase
+    .from('playlists')
+    .select('*')
+    .eq('id', playlistId)
+    .single()
+
+  if (fetchError) {
+    alert('Error fetching playlist: ' + fetchError.message)
+    return
+  }
+
+  const name = prompt('Enter new playlist name:', playlist.name)
+  if (!name) return
+
+  const description = prompt('Enter new playlist description:', playlist.description)
+
+  const { error } = await supabase
+    .from('playlists')
+    .update({ name, description })
+    .eq('id', playlistId)
+
+  if (error) {
+    alert('Error updating playlist: ' + error.message)
+    return
+  }
+
+  renderApp()
+}
+
+window.handleDeletePlaylist = async (playlistId) => {
+  if (!confirm('Are you sure you want to delete this playlist?')) return
+
+  const { error } = await supabase
+    .from('playlists')
+    .delete()
+    .eq('id', playlistId)
+
+  if (error) {
+    alert('Error deleting playlist: ' + error.message)
+    return
+  }
+
+  renderApp()
+}
+
+window.addSongToPlaylist = async (songId, playlistId) => {
+  const { error } = await supabase
+    .from('playlist_songs')
+    .insert([
+      {
+        playlist_id: playlistId,
+        song_id: songId
+      }
+    ])
+
+  if (error) {
+    alert('Error adding song to playlist: ' + error.message)
+    return
+  }
+
+  alert('Song added to playlist!')
+  renderApp()
+}
+
+window.removeSongFromPlaylist = async (playlistId, songId) => {
+  const { error } = await supabase
+    .from('playlist_songs')
+    .delete()
+    .match({ playlist_id: playlistId, song_id: songId })
+
+  if (error) {
+    alert('Error removing song from playlist: ' + error.message)
+    return
+  }
+
+  renderApp()
+}
+
+window.togglePlaylistDropdown = (songId) => {
+  const dropdown = document.getElementById(`playlist-dropdown-${songId}`)
+  dropdown.classList.toggle('hidden')
+}
+
+window.handleSearchInput = (event) => {
+  searchQuery = event.target.value
+  renderApp()
+}
+
 // Router
 function handleRoute() {
   const hash = window.location.hash || '#songs'
@@ -399,6 +638,11 @@ function handleRoute() {
       break
     case '#add-song':
       main.innerHTML = AddSongForm()
+      break
+    case '#playlists':
+      PlaylistsView().then(content => {
+        main.innerHTML = content
+      })
       break
     default:
       SongsList().then(content => {
