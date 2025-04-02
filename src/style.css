@@ -40,6 +40,10 @@ body {
   top: 0;
 }
 
+.mobile-header nav {
+  margin-top: 1rem;
+}
+
 main:focus {
   outline: none;
 }
@@ -98,5 +102,11 @@ main:focus {
 
   .header nav a {
     @apply mb-2;
+  }
+}
+
+@media (max-width: 640px) {
+  .header nav {
+    margin-top: 1rem;
   }
 }

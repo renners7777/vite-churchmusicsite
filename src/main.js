@@ -14,7 +14,7 @@ const app = document.querySelector('#app')
 // Header component
 function Header() {
   return `
-    <header class="header bg-primary-600 text-white p-4">
+    <header class="header bg-primary-600 text-white p-4 ${window.innerWidth < 640 ? 'mobile-header' : ''}">
       <div class="container mx-auto flex items-center justify-between">
         <div class="flex items-center">
           <img src="/Reverse-Full-logo.png" alt="St Timothy's Church Logo" class="h-12 w-auto mr-4">
