@@ -14,19 +14,17 @@ const app = document.querySelector('#app')
 // Header component
 function Header() {
   return `
-    <header class="header bg-primary-600 text-white p-4 ${window.innerWidth < 640 ? 'mobile-header' : ''}">
-      <div class="container mx-auto flex items-center justify-between">
-        <div class="flex items-center">
-          <img src="/Reverse-Full-logo.png" alt="St Timothy's Church Logo" class="h-12 w-auto mr-4">
-          <h1 class="text-2xl font-bold">St Timothy's Church Music</h1>
-        </div>
-        <nav>
-          <ul class="flex space-x-4">
-            <li><a href="#songs" class="hover:text-blue-200 focus:outline-none focus:ring-2 focus:ring-blue-300 rounded">Songs</a></li>
-            <li><a href="#add-song" class="hover:text-blue-200 focus:outline-none focus:ring-2 focus:ring-blue-300 rounded">Add Song</a></li>
-          </ul>
-        </nav>
+    <header class="header bg-primary-600 text-white p-4 flex flex-col">
+      <div class="flex items-center">
+        <img src="/Reverse-Full-logo.png" alt="St Timothy's Church Logo" class="h-12 w-auto mr-4">
+        <h1 class="text-2xl font-bold">St Timothy's Church Music</h1>
       </div>
+      <nav class="mt-4">
+        <ul class="flex space-x-4">
+          <li><a href="#songs" class="hover:text-blue-200 focus:outline-none focus:ring-2 focus:ring-blue-300 rounded">Songs</a></li>
+          <li><a href="#add-song" class="hover:text-blue-200 focus:outline-none focus:ring-2 focus:ring-blue-300 rounded">Add Song</a></li>
+        </ul>
+      </nav>
     </header>
   `
 }
