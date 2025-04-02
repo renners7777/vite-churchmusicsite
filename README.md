@@ -1,3 +1,3 @@
 # vite-churchmusicsite
 
-[Edit in StackBlitz next generation editor ⚡️](https://stackblitz.com/~/github.com/renners7777/vite-churchmusicsite)
+I have wanted to create a website for my church music team for a long time now. I decided to use Vite as this was the quickest and best way of creating this site.
