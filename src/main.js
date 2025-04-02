@@ -178,8 +178,8 @@ async function renderApp() {
     </main>
     <footer class="bg-gray-100 p-4 mt-8">
       <div class="container mx-auto text-center">
-        <p>Contact us: <a href="mailto:info@sttims.org.uk" class="text-blue-600 hover:underline">info@sttims.org.uk</a></p>
-        <p class="mt-2">© ${new Date().getFullYear()} St Timothy's Church</p>
+        <p>Contact us: <a href="mailto:ChrisRenshaw7@outlook.com" class="text-blue-600 hover:underline">ChrisRenshaw7@outlook.com</a></p>
+        <p class="mt-2">© ${new Date().getFullYear()} Chris Renshaw</p>
       </div>
     </footer>
   `
