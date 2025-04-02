@@ -70,3 +70,22 @@ main:focus {
     @apply w-full;
   }
 }
+
+/* When the screen goes to mobile size the "St. Timothy's Church Music" text overlaps with the "Songs" and "Add Song" links */
+@media (max-width: 640px) {
+  .header {
+    @apply flex flex-col items-center;
+  }
+
+  .header h1 {
+    @apply text-center;
+  }
+
+  .header nav {
+    @apply flex flex-col items-center;
+  }
+
+  .header nav a {
+    @apply mb-2;
+  }
+}
