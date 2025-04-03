@@ -61,8 +61,9 @@ export async function handleLogin(event) {
     return
   }
 
+  window.currentUser = data.user
   window.location.hash = '#songs'
-  window.dispatchEvent(new Event('auth-state-change'))
+  window.dispatchEvent(new Event('content-update'))
 }
 
 export async function handleSignup(event) {
@@ -92,8 +93,9 @@ export async function handleSignOut() {
     return
   }
 
+  window.currentUser = null
   window.location.hash = '#login'
-  window.dispatchEvent(new Event('auth-state-change'))
+  window.dispatchEvent(new Event('content-update'))
 }
 
 // Initialize auth handlers
