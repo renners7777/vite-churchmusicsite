@@ -17,21 +17,26 @@ export async function SongsList(currentUser, searchQuery = '') {
     .eq('user_id', currentUser.id)
 
   const searchBar = `
-    <div class="mb-6">
-      <label for="song-search" class="sr-only">Search songs</label>
-      <div class="relative">
-        <input 
-          type="text" 
-          id="song-search" 
-          placeholder="Search songs..." 
-          class="input pl-10"
-          value="${searchQuery}"
-          oninput="handleSearchInput(event)"
-          aria-label="Search songs"
-        />
-        <span class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
-          🔍
-        </span>
+    <div>
+      <div class="mb-6">
+        <h1 class="text-2xl font-bold">Welcome, ${currentUser.email}</h1>
+      </div>
+      <div class="mb-6">
+        <label for="song-search" class="sr-only">Search songs</label>
+        <div class="relative">
+          <input 
+            type="text" 
+            id="song-search" 
+            placeholder="Search songs..." 
+            class="input pl-10"
+            value="${searchQuery}"
+            oninput="handleSearchInput(event)"
+            aria-label="Search songs"
+          />
+          <span class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
+            🔍
+          </span>
+        </div>
       </div>
     </div>
   `
