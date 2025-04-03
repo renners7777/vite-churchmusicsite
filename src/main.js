@@ -40,11 +40,13 @@ async function handleRoute() {
   }
 
   app.innerHTML = `
-    ${Header(window.currentUser)}
-    <main class="container mx-auto px-4 py-8">
-      ${content}
-    </main>
-    ${Footer()}
+    <div class="min-h-screen flex flex-col">
+      ${Header(window.currentUser)}
+      <main class="container mx-auto px-4 py-8 flex-grow">
+        ${content}
+      </main>
+      ${Footer()}
+    </div>
   `
 }
 
