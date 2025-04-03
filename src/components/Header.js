@@ -74,13 +74,7 @@ export function Header(currentUser) {
           >
           <h1 class="text-2xl font-bold text-white">St Timothy's Church Music</h1>
         </div>
-        <div class="flex items-center space-x-4">
-          ${currentUser ? 
-            `<span class="text-white" role="status">
-               Welcome, ${currentUser.email}
-             </span>` 
-            : ''
-          }
+        <div class="flex items-center">
           ${authLinks}
         </div>
       </div>

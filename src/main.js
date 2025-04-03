@@ -41,6 +41,11 @@ async function handleRoute() {
   app.innerHTML = `
     ${Header(window.currentUser)}
     <main class="container mx-auto px-4 py-8">
+      ${window.currentUser ? `
+        <div class="mb-6">
+          <h1 class="text-2xl font-bold">Welcome, ${window.currentUser.email}</h1>
+        </div>
+      ` : ''}
       ${content}
     </main>
   `
