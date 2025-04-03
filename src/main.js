@@ -5,6 +5,7 @@ import { LoginForm, SignupForm } from './components/Auth.js'
 import { SongsList } from './components/Songs.js'
 import { PlaylistsView } from './components/Playlists.js'
 import { AddSongForm } from './components/AddSong.js'
+import { Footer } from './components/Footer.js'
 
 // Main app component
 const app = document.querySelector('#app')
@@ -48,6 +49,7 @@ async function handleRoute() {
       ` : ''}
       ${content}
     </main>
+    ${Footer()}
   `
 }
 
