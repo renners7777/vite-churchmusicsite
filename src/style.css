@@ -5,6 +5,7 @@
 /* Base styles */
 :root {
   --primary-color: #1a56db;
+  --primary-hover: #1e429f;
   --secondary-color: #4f46e5;
   --text-color: #1f2937;
   --error-color: #dc2626;
@@ -32,7 +33,7 @@ body {
 
 @layer components {
   .button {
-    @apply inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-primary hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary transition-colors;
+    @apply inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-primary hover:bg-[var(--primary-hover)] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary transition-colors;
   }
 
   .button-secondary {
@@ -180,6 +181,7 @@ body {
 @media (prefers-contrast: high) {
   :root {
     --primary-color: #0000ff;
+    --primary-hover: #000099;
     --secondary-color: #000099;
     --text-color: #000000;
     --error-color: #ff0000;
