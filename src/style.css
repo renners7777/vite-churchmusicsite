@@ -2,16 +2,20 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Base styles */
 :root {
-  --primary-color: #1a365d;
-  --secondary-color: #2b6cb0;
+  --primary-color: #1a56db;
+  --secondary-color: #4f46e5;
+  --text-color: #1f2937;
+  --error-color: #dc2626;
+  --success-color: #059669;
 }
 
 body {
   margin: 0;
   font-family: system-ui, -apple-system, sans-serif;
   line-height: 1.5;
-  color: #1a202c;
+  color: #1f2937;
 }
 
 .sr-only {
@@ -26,6 +30,7 @@ body {
   border: 0;
 }
 
+/* Accessibility improvements */
 .skip-link {
   position: absolute;
   top: -40px;
@@ -34,34 +39,102 @@ body {
   color: white;
   padding: 8px;
   z-index: 100;
+  transition: top 0.2s;
 }
 
 .skip-link:focus {
   top: 0;
 }
 
-.mobile-header nav {
-  margin-top: 1rem;
+/* Focus styles */
+*:focus {
+  outline: 2px solid var(--primary-color);
+  outline-offset: 2px;
 }
 
-main:focus {
-  outline: none;
-}
-
-.song-card {
-  @apply bg-white rounded-lg shadow-md p-6 mb-4 hover:shadow-lg transition-shadow;
+/* Form elements */
+.input {
+  @apply w-full px-4 py-2 border border-gray-300 rounded-md;
+  @apply focus:border-blue-500 focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50;
+  @apply disabled:bg-gray-100 disabled:cursor-not-allowed;
+  transition: border-color 0.2s, box-shadow 0.2s;
 }
 
 .button {
-  @apply bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2;
+  @apply px-4 py-2 bg-blue-600 text-white rounded-md;
+  @apply hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50;
+  @apply disabled:bg-gray-400 disabled:cursor-not-allowed;
+  transition: background-color 0.2s, transform 0.1s;
 }
 
-.input {
-  @apply w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500;
+.button:active {
+  transform: translateY(1px);
 }
 
-/* I want to ensure that the app is mobile-first */
+/* Card styles */
+.song-card {
+  @apply bg-white rounded-lg shadow-md p-6;
+  @apply transition-shadow duration-200;
+  @apply hover:shadow-lg;
+}
+
+/* Layout improvements */
+.container {
+  @apply max-w-7xl mx-auto px-4 sm:px-6 lg:px-8;
+}
+
+/* Header styles */
+.header {
+  @apply bg-gradient-to-r from-blue-600 to-blue-800;
+  @apply shadow-md;
+}
+
+/* Dropdown styles */
+.dropdown {
+  @apply absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg z-10;
+  @apply ring-1 ring-black ring-opacity-5;
+}
+
+.dropdown-item {
+  @apply block w-full text-left px-4 py-2 text-sm text-gray-700;
+  @apply hover:bg-gray-100 focus:bg-gray-100;
+  @apply focus:outline-none;
+}
+
+/* Form group styles */
+.form-group {
+  @apply space-y-2;
+}
+
+.form-label {
+  @apply block text-sm font-medium text-gray-700;
+}
+
+/* Error styles */
+.error-message {
+  @apply text-error-color text-sm mt-1;
+}
+
+/* Success styles */
+.success-message {
+  @apply text-success-color text-sm mt-1;
+}
+
+/* Loading state */
+.loading {
+  @apply opacity-50 pointer-events-none;
+}
+
+/* Responsive improvements */
 @media (max-width: 640px) {
+  .grid {
+    @apply grid-cols-1;
+  }
+  
+  .header {
+    @apply px-4;
+  }
+  
   .song-card {
     @apply p-4;
   }
@@ -75,7 +148,6 @@ main:focus {
   }
 }
 
-/* When the screen goes to mobile size the "St. Timothy's Church Music" text overlaps with the "Songs" and "Add Song" links */
 @media (max-width: 640px) {
   .header {
     @apply flex flex-col items-center;
@@ -94,7 +166,6 @@ main:focus {
   }
 }
 
-/* When the screen size goes below 500px, I want the "nav" to be stacked */
 @media (max-width: 500px) {
   .header nav {
     @apply flex-col items-center;
@@ -108,5 +179,16 @@ main:focus {
 @media (max-width: 640px) {
   .header nav {
     margin-top: 1rem;
+  }
+}
+
+/* High contrast mode */
+@media (prefers-contrast: high) {
+  :root {
+    --primary-color: #0000ff;
+    --secondary-color: #000099;
+    --text-color: #000000;
+    --error-color: #ff0000;
+    --success-color: #008000;
   }
 }
