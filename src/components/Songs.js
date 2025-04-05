@@ -134,36 +134,6 @@ export async function SongsList(currentUser, searchQuery = '') {
                 <span aria-hidden="true">↗️</span>
               </a>
             ` : ''}
-            <div class="mt-6">
-              <h4 id="comments-heading-${song.id}" class="font-semibold mb-2">Comments</h4>
-              <div 
-                id="comments-${song.id}" 
-                class="prose prose-sm max-w-none"
-                aria-labelledby="comments-heading-${song.id}"
-              >
-                ${song.comments ? marked.parse(song.comments) : 'No comments yet'}
-              </div>
-              <form 
-                onsubmit="handleCommentSubmit(event, ${song.id})" 
-                class="mt-4"
-                aria-label="Add comment form"
-              >
-                <div class="form-group">
-                  <label for="comment-${song.id}" class="form-label">Add a comment:</label>
-                  <textarea
-                    id="comment-${song.id}"
-                    class="input"
-                    rows="3"
-                    required
-                    aria-describedby="comment-help-${song.id}"
-                  ></textarea>
-                  <small id="comment-help-${song.id}" class="text-gray-500">
-                    You can use markdown formatting
-                  </small>
-                </div>
-                <button type="submit" class="button mt-2">Submit Comment</button>
-              </form>
-            </div>
           </article>
         `).join('')}
       </div>
