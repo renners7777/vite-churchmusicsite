@@ -26,22 +26,15 @@ export function AddSongForm() {
           />
         </div>
         <div>
-          <label for="lyrics" class="block text-sm font-medium text-gray-700">Lyrics</label>
-          <textarea 
-            id="lyrics" 
-            required 
-            class="input min-h-[200px]"
-            aria-label="Song lyrics"
-          ></textarea>
-          <p class="mt-1 text-sm text-gray-500">You can use markdown for formatting</p>
-        </div>
-        <div>
-          <label for="notes" class="block text-sm font-medium text-gray-700">Notes (Optional)</label>
-          <textarea 
-            id="notes" 
+          <label for="youtube-url" class="block text-sm font-medium text-gray-700">YouTube URL (Optional)</label>
+          <input 
+            type="url" 
+            id="youtube-url" 
             class="input"
-            aria-label="Additional notes about the song"
-          ></textarea>
+            aria-label="YouTube URL"
+            pattern="https?://.*"
+            title="Please enter a valid URL starting with http:// or https://"
+          />
         </div>
         <div class="flex justify-end space-x-3">
           <a 
