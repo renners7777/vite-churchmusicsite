@@ -63,10 +63,9 @@ export async function handleAddSong(event) {
   
   const title = document.getElementById('title').value.trim()
   const author = document.getElementById('author').value.trim()
-  const lyrics = document.getElementById('lyrics').value.trim()
-  const notes = document.getElementById('notes').value.trim()
+  const youtubeUrl = document.getElementById('youtube-url').value.trim()
 
-  if (!title || !author || !lyrics) {
+  if (!title || !author || !youtubeUrl) {
     alert('Please fill in all required fields')
     return
   }
@@ -77,8 +76,8 @@ export async function handleAddSong(event) {
       {
         title,
         author,
-        lyrics,
-        notes: notes || null
+        youtube_url: youtubeUrl,
+        created_by: window.currentUser.id
       }
     ])
 
