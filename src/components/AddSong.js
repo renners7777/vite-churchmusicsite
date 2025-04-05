@@ -30,6 +30,7 @@ export function AddSongForm() {
           <input 
             type="url" 
             id="youtube-url" 
+            required
             class="input"
             aria-label="YouTube URL"
             pattern="https?://.*"
