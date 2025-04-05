@@ -1,6 +1,8 @@
 import { marked } from 'marked'
 import supabase from '../services/supabase.js'
 
+let searchTimeout = null
+
 export async function SongsList(currentUser, searchQuery = '') {
   if (!currentUser) {
     return `
@@ -325,7 +327,24 @@ export async function handleDeleteSong(songId, currentUser) {
   window.dispatchEvent(new Event('content-update'))
 }
 
-// Initialize song handlers
+export function handleSearchInput(event) {
+  event.preventDefault()
+  const query = event.target.value.trim()
+  
+  // Clear any existing timeout
+  if (searchTimeout) {
+    clearTimeout(searchTimeout)
+  }
+  
+  // Set a new timeout to update content after user stops typing
+  searchTimeout = setTimeout(() => {
+    window.history.replaceState(null, '', `#songs?search=${encodeURIComponent(query)}`)
+    window.dispatchEvent(new Event('content-update'))
+  }, 300)
+}
+
+// Initialize all handlers
 window.handleAddSong = (event) => handleAddSong(event, window.currentUser)
 window.handleEditSong = (songId) => handleEditSong(songId, window.currentUser)
 window.handleDeleteSong = (songId) => handleDeleteSong(songId, window.currentUser)
+window.handleSearchInput = handleSearchInput
