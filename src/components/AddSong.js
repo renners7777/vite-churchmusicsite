@@ -26,7 +26,7 @@ export function AddSongForm() {
           />
         </div>
         <div>
-          <label for="youtube-url" class="block text-sm font-medium text-gray-700">YouTube URL (Optional)</label>
+          <label for="youtube-url" class="block text-sm font-medium text-gray-700">YouTube URL</label>
           <input 
             type="url" 
             id="youtube-url" 
