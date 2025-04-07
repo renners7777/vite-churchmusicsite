@@ -1,12 +1,45 @@
 import supabase from '../services/supabase.js'
 
+// Global state
+const state = {
+  activeVideoId: null // Track currently playing video
+}
+
 // Initialize handlers for the component
 function initializeHandlers() {
   // Remove any existing handlers first
   document.removeEventListener('click', handlePlaylistAction)
+  document.removeEventListener('click', handleVideoModal)
 
   // Add the handlers
   document.addEventListener('click', handlePlaylistAction)
+  document.addEventListener('click', handleVideoModal)
+}
+
+// Extract YouTube video ID from URL
+function getYouTubeVideoId(url) {
+  if (!url) return null
+  const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/
+  const match = url.match(regExp)
+  return (match && match[2].length === 11) ? match[2] : null
+}
+
+// Handle video modal interactions
+function handleVideoModal(event) {
+  const videoBtn = event.target.closest('[data-action="play-video"]')
+  const closeBtn = event.target.closest('[data-action="close-modal"]')
+  const modal = document.getElementById('video-modal')
+
+  if (videoBtn) {
+    const videoId = videoBtn.dataset.videoId
+    state.activeVideoId = videoId
+    window.dispatchEvent(new Event('content-update'))
+  }
+
+  if (closeBtn || (modal && event.target === modal)) {
+    state.activeVideoId = null
+    window.dispatchEvent(new Event('content-update'))
+  }
 }
 
 export async function PlaylistsView(currentUser) {
@@ -30,7 +63,8 @@ export async function PlaylistsView(currentUser) {
         songs (
           id,
           title,
-          author
+          author,
+          youtube_url
         )
       )
     `)
@@ -103,22 +137,34 @@ export async function PlaylistsView(currentUser) {
                 >
                   ${playlist.playlist_songs.map(ps => `
                     <li class="flex justify-between items-center pt-2">
-                      <div>
+                      <div class="flex-1">
                         <span class="font-medium">${ps.songs.title}</span>
                         ${ps.songs.author ? 
                           `<span class="text-gray-500"> - ${ps.songs.author}</span>` 
                           : ''
                         }
                       </div>
-                      <button 
-                        data-action="remove-song"
-                        data-playlist-id="${playlist.id}"
-                        data-song-id="${ps.songs.id}"
-                        class="button-icon text-red-600"
-                        aria-label="Remove ${ps.songs.title} from ${playlist.name}"
-                      >
-                        ✕
-                      </button>
+                      <div class="flex items-center space-x-2">
+                        ${ps.songs.youtube_url ? `
+                          <button 
+                            data-action="play-video"
+                            data-video-id="${getYouTubeVideoId(ps.songs.youtube_url)}"
+                            class="button-icon"
+                            aria-label="Play ${ps.songs.title}"
+                          >
+                            ▶️
+                          </button>
+                        ` : ''}
+                        <button 
+                          data-action="remove-song"
+                          data-playlist-id="${playlist.id}"
+                          data-song-id="${ps.songs.id}"
+                          class="button-icon text-red-600"
+                          aria-label="Remove ${ps.songs.title} from ${playlist.name}"
+                        >
+                          ✕
+                        </button>
+                      </div>
                     </li>
                   `).join('')}
                 </ul>
@@ -131,6 +177,33 @@ export async function PlaylistsView(currentUser) {
           </article>
         `).join('')}
       </div>
+
+      ${state.activeVideoId ? `
+        <div id="video-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div class="bg-white p-4 rounded-lg shadow-lg max-w-3xl w-full mx-4">
+            <div class="flex justify-between items-center mb-4">
+              <h3 class="text-xl font-semibold">Now Playing</h3>
+              <button 
+                data-action="close-modal"
+                class="text-gray-500 hover:text-gray-700"
+                aria-label="Close video"
+              >
+                ✕
+              </button>
+            </div>
+            <div class="relative" style="padding-bottom: 56.25%">
+              <iframe
+                class="absolute inset-0 w-full h-full"
+                src="https://www.youtube.com/embed/${state.activeVideoId}?autoplay=1"
+                title="YouTube video player"
+                frameborder="0"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                allowfullscreen
+              ></iframe>
+            </div>
+          </div>
+        </div>
+      ` : ''}
     </section>
   `
 }
