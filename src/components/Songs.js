@@ -4,9 +4,10 @@ import supabase from '../services/supabase.js'
 // Global state for songs list and search
 const state = {
   songs: [],
+  playlists: [], // Add playlists to state
   searchQuery: '',
   loading: false,
-  addingToPlaylist: null // Track which song is being added to a playlist
+  addingToPlaylist: null
 }
 
 // Debounce helper
@@ -37,54 +38,40 @@ export async function SongsList(currentUser) {
     await loadSongs()
   }
 
-  const { data: playlists } = await supabase
-    .from('playlists')
-    .select('id, name')
-    .eq('user_id', currentUser.id)
+  const filteredSongs = state.searchQuery
+    ? state.songs.filter(song => 
+        song.title.toLowerCase().includes(state.searchQuery.toLowerCase()) ||
+        (song.author && song.author.toLowerCase().includes(state.searchQuery.toLowerCase()))
+      )
+    : state.songs
 
-  // Search bar with loading state
   const searchBar = `
-    <div>
-      <div class="mb-6">
-        <h1 class="text-2xl font-bold">Welcome, ${currentUser.email}</h1>
-      </div>
-      <div class="mb-6">
-        <label for="song-search" class="sr-only">Search songs</label>
-        <div class="relative">
-          <input 
-            type="text" 
-            id="song-search" 
-            placeholder="Search songs..." 
-            class="input pl-10 ${state.loading ? 'opacity-50' : ''}"
+    <div class="mb-6">
+      <div class="flex gap-4 items-center">
+        <div class="flex-1">
+          <input
+            type="search"
+            id="song-search"
+            class="input"
+            placeholder="Search songs..."
             value="${state.searchQuery}"
             onkeydown="handleSearchKeyDown(event)"
             oninput="handleSearchInput(event)"
-            ${state.loading ? 'disabled' : ''}
             aria-label="Search songs"
           />
-          <span class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
-            ${state.loading ? '⌛' : '🔍'}
-          </span>
-          ${state.searchQuery ? `
-            <button 
-              onclick="clearSearch()"
-              class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-              aria-label="Clear search"
-              ${state.loading ? 'disabled' : ''}
-            >
-              ✕
-            </button>
-          ` : ''}
         </div>
+        ${state.searchQuery ? `
+          <button
+            onclick="clearSearch()"
+            class="button-icon"
+            aria-label="Clear search"
+          >
+            ❌
+          </button>
+        ` : ''}
       </div>
     </div>
   `
-
-  // Filter songs based on search query
-  const filteredSongs = state.songs.filter(song => 
-    song.title.toLowerCase().includes(state.searchQuery.toLowerCase()) ||
-    (song.author && song.author.toLowerCase().includes(state.searchQuery.toLowerCase()))
-  )
 
   // Show appropriate message if no songs found
   if (filteredSongs.length === 0) {
@@ -115,7 +102,7 @@ export async function SongsList(currentUser) {
             <div class="flex justify-between items-start mb-4">
               <h3 id="song-title-${song.id}" class="text-xl font-semibold">${song.title}</h3>
               <div class="flex space-x-2">
-                ${playlists?.length ? `
+                ${currentUser && state.playlists.length ? `
                   <div class="relative">
                     <button 
                       data-action="toggle-playlist"
@@ -134,7 +121,7 @@ export async function SongsList(currentUser) {
                       role="menu"
                       aria-label="Add to playlist options"
                     >
-                      ${playlists.map(playlist => `
+                      ${state.playlists.map(playlist => `
                         <button
                           data-action="add-to-playlist"
                           data-song-id="${song.id}"
@@ -173,24 +160,29 @@ export async function SongsList(currentUser) {
 }
 
 // Load all songs from the database
-async function loadSongs() {
+export async function loadSongs() {
   state.loading = true
   window.dispatchEvent(new Event('content-update'))
 
-  const { data, error } = await supabase
-    .from('songs')
-    .select('*')
-    .order('title')
+  try {
+    const [songsResult, playlistsResult] = await Promise.all([
+      supabase.from('songs').select('*').order('title'),
+      supabase.from('playlists').select('*').eq('user_id', window.currentUser?.id)
+    ])
 
-  if (error) {
-    console.error('Error loading songs:', error)
+    if (songsResult.error) throw songsResult.error
+    if (playlistsResult.error) throw playlistsResult.error
+
+    state.songs = songsResult.data || []
+    state.playlists = playlistsResult.data || []
+  } catch (error) {
+    console.error('Error loading data:', error)
     state.songs = []
-  } else {
-    state.songs = data || []
+    state.playlists = []
+  } finally {
+    state.loading = false
+    window.dispatchEvent(new Event('content-update'))
   }
-
-  state.loading = false
-  window.dispatchEvent(new Event('content-update'))
 }
 
 // Handle search input with debounce
