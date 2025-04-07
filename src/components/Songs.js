@@ -8,7 +8,8 @@ const state = {
   searchQuery: '',
   loading: false,
   addingToPlaylist: null,
-  activeVideoId: null // Track currently playing video
+  activeVideoId: null, // Track currently playing video
+  isInitialized: false // Track if initial load is done
 }
 
 // Debounce helper
@@ -26,6 +27,8 @@ function debounce(func, wait) {
 
 // Initialize handlers for the component
 function initializeHandlers() {
+  if (state.isInitialized) return; // Prevent multiple initializations
+  
   // Remove any existing handlers first
   document.removeEventListener('click', handlePlaylistAction)
   document.removeEventListener('content-update', loadSongs)
@@ -33,8 +36,10 @@ function initializeHandlers() {
 
   // Add handlers
   document.addEventListener('click', handlePlaylistAction)
-  document.addEventListener('content-update', loadSongs)
   document.addEventListener('click', handleVideoModal)
+  
+  // Mark as initialized
+  state.isInitialized = true;
 }
 
 // Extract YouTube video ID from URL
@@ -127,8 +132,10 @@ export async function SongsList(currentUser) {
   // Initialize handlers when component is mounted
   initializeHandlers()
 
-  // Load initial data
-  await loadSongs()
+  // Load initial data if not already loaded
+  if (!state.isInitialized || state.songs.length === 0) {
+    await loadSongs()
+  }
 
   if (!currentUser) {
     return `
@@ -137,11 +144,6 @@ export async function SongsList(currentUser) {
         <a href="#login" class="button">Login</a>
       </div>
     `
-  }
-
-  // Load songs if not already loaded
-  if (state.songs.length === 0 && !state.loading) {
-    await loadSongs()
   }
 
   const filteredSongs = state.searchQuery
