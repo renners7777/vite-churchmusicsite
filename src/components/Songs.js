@@ -205,31 +205,40 @@ export async function SongsList(currentUser) {
     : state.songs
 
   const searchBar = `
-    <div class="mb-6">
-      <div class="flex gap-4 items-center">
-        <div class="flex-1 relative">
-          <input
-            type="search"
-            id="song-search"
-            class="input pr-10 w-full"
-            placeholder="Search by title, author, or lyrics..."
-            value="${state.searchQuery}"
-            onkeydown="handleSearchKeyDown(event)"
-            oninput="handleSearchInput(event)"
-            aria-label="Search songs"
-            autocomplete="off"
-          />
-          ${state.searchQuery ? `
-            <button
-              onclick="clearSearch()"
-              class="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-              aria-label="Clear search"
-            >
-              <span aria-hidden="true">✕</span>
-            </button>
-          ` : ''}
+    <div class="mb-8">
+      <div class="flex flex-col md:flex-row gap-4 items-center">
+        <div class="w-full md:max-w-2xl">
+          <div class="search-container">
+            <span class="search-icon">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                <path fill-rule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clip-rule="evenodd" />
+              </svg>
+            </span>
+            <input
+              type="search"
+              id="song-search"
+              class="search-input"
+              placeholder="Search by title, author, or lyrics..."
+              value="${state.searchQuery}"
+              onkeydown="handleSearchKeyDown(event)"
+              oninput="handleSearchInput(event)"
+              aria-label="Search songs"
+              autocomplete="off"
+            />
+            ${state.searchQuery ? `
+              <button
+                onclick="clearSearch()"
+                class="clear-search"
+                aria-label="Clear search"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                  <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd" />
+                </svg>
+              </button>
+            ` : ''}
+          </div>
         </div>
-        <div class="text-sm text-gray-500" role="status" aria-live="polite">
+        <div class="search-results-count" role="status" aria-live="polite">
           ${filteredSongs.length} ${filteredSongs.length === 1 ? 'song' : 'songs'} found
         </div>
       </div>
