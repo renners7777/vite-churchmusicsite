@@ -7,7 +7,8 @@ const state = {
   playlists: [], // Add playlists to state
   searchQuery: '',
   loading: false,
-  addingToPlaylist: null
+  addingToPlaylist: null,
+  activeVideoId: null // Track currently playing video
 }
 
 // Debounce helper
@@ -28,15 +29,98 @@ function initializeHandlers() {
   // Remove any existing handlers first
   document.removeEventListener('click', handlePlaylistAction)
   document.removeEventListener('content-update', loadSongs)
+  document.removeEventListener('click', handleVideoModal)
 
-  // Add the handlers
+  // Add handlers
   document.addEventListener('click', handlePlaylistAction)
   document.addEventListener('content-update', loadSongs)
+  document.addEventListener('click', handleVideoModal)
+}
 
-  // Set up window handlers for search
-  window.handleSearchInput = handleSearchInput
-  window.handleSearchKeyDown = handleSearchKeyDown
-  window.clearSearch = clearSearch
+// Extract YouTube video ID from URL
+function getYouTubeVideoId(url) {
+  if (!url) return null
+  const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/
+  const match = url.match(regExp)
+  return (match && match[2].length === 11) ? match[2] : null
+}
+
+// Handle video modal interactions
+function handleVideoModal(event) {
+  const videoBtn = event.target.closest('[data-action="play-video"]')
+  const closeBtn = event.target.closest('[data-action="close-modal"]')
+  const modal = document.getElementById('video-modal')
+
+  if (videoBtn) {
+    const videoId = videoBtn.dataset.videoId
+    state.activeVideoId = videoId
+    window.dispatchEvent(new Event('content-update'))
+  }
+
+  if (closeBtn || (modal && event.target === modal)) {
+    state.activeVideoId = null
+    window.dispatchEvent(new Event('content-update'))
+  }
+}
+
+// Load all songs from the database
+export async function loadSongs() {
+  state.loading = true
+  window.dispatchEvent(new Event('content-update'))
+
+  try {
+    const [songsResult, playlistsResult] = await Promise.all([
+      supabase.from('songs').select('*').order('title'),
+      supabase.from('playlists').select('*').eq('user_id', window.currentUser?.id)
+    ])
+
+    if (songsResult.error) throw songsResult.error
+    if (playlistsResult.error) throw playlistsResult.error
+
+    state.songs = songsResult.data || []
+    state.playlists = playlistsResult.data || []
+  } catch (error) {
+    console.error('Error loading data:', error)
+    state.songs = []
+    state.playlists = []
+  } finally {
+    state.loading = false
+    window.dispatchEvent(new Event('content-update'))
+  }
+}
+
+// Handle search input with debounce
+export function handleSearchInput(event) {
+  // Prevent the event from bubbling up
+  event.stopPropagation()
+  event.preventDefault()
+  
+  // Update the input value immediately
+  const query = event.target.value
+  const input = event.target
+  input.value = query
+
+  // Debounce the state update and re-render
+  debouncedUpdateSearch(query)
+}
+
+// Prevent navigation on backspace
+export function handleSearchKeyDown(event) {
+  if (event.key === 'Backspace') {
+    event.stopPropagation()
+  }
+}
+
+// Debounced function to update search state
+const debouncedUpdateSearch = debounce((query) => {
+  state.searchQuery = query
+  window.dispatchEvent(new Event('content-update'))
+}, 300)
+
+export function clearSearch() {
+  state.searchQuery = ''
+  document.getElementById('song-search').value = ''
+  window.dispatchEvent(new Event('content-update'))
 }
 
 export async function SongsList(currentUser) {
@@ -163,82 +247,48 @@ export async function SongsList(currentUser) {
             </div>
             <p class="text-gray-600 mb-4">By ${song.author || 'Unknown'}</p>
             ${song.youtube_url ? `
-              <a 
-                href="${song.youtube_url}" 
-                target="_blank" 
-                rel="noopener noreferrer" 
+              <button 
+                data-action="play-video"
+                data-video-id="${getYouTubeVideoId(song.youtube_url)}"
                 class="button inline-flex items-center space-x-2"
-                aria-label="Watch ${song.title} on YouTube (opens in new tab)"
+                aria-label="Play ${song.title}"
               >
-                <span>Watch on YouTube</span>
-                <span aria-hidden="true">↗️</span>
-              </a>
+                <span>Play Video</span>
+                <span aria-hidden="true">▶️</span>
+              </button>
             ` : ''}
           </article>
         `).join('')}
       </div>
+
+      ${state.activeVideoId ? `
+        <div id="video-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div class="bg-white p-4 rounded-lg shadow-lg max-w-3xl w-full mx-4">
+            <div class="flex justify-between items-center mb-4">
+              <h3 class="text-xl font-semibold">Now Playing</h3>
+              <button 
+                data-action="close-modal"
+                class="text-gray-500 hover:text-gray-700"
+                aria-label="Close video"
+              >
+                ✕
+              </button>
+            </div>
+            <div class="relative" style="padding-bottom: 56.25%">
+              <iframe
+                class="absolute inset-0 w-full h-full"
+                src="https://www.youtube.com/embed/${state.activeVideoId}?autoplay=1"
+                title="YouTube video player"
+                frameborder="0"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                allowfullscreen
+              ></iframe>
+            </div>
+          </div>
+        </div>
+      ` : ''}
     </section>
   `
-}
-
-// Load all songs from the database
-export async function loadSongs() {
-  state.loading = true
-  window.dispatchEvent(new Event('content-update'))
-
-  try {
-    const [songsResult, playlistsResult] = await Promise.all([
-      supabase.from('songs').select('*').order('title'),
-      supabase.from('playlists').select('*').eq('user_id', window.currentUser?.id)
-    ])
-
-    if (songsResult.error) throw songsResult.error
-    if (playlistsResult.error) throw playlistsResult.error
-
-    state.songs = songsResult.data || []
-    state.playlists = playlistsResult.data || []
-  } catch (error) {
-    console.error('Error loading data:', error)
-    state.songs = []
-    state.playlists = []
-  } finally {
-    state.loading = false
-    window.dispatchEvent(new Event('content-update'))
-  }
-}
-
-// Handle search input with debounce
-export function handleSearchInput(event) {
-  // Prevent the event from bubbling up
-  event.stopPropagation()
-  event.preventDefault()
-  
-  // Update the input value immediately
-  const query = event.target.value
-  const input = event.target
-  input.value = query
-
-  // Debounce the state update and re-render
-  debouncedUpdateSearch(query)
-}
-
-// Prevent navigation on backspace
-export function handleSearchKeyDown(event) {
-  if (event.key === 'Backspace') {
-    event.stopPropagation()
-  }
-}
-
-// Debounced function to update search state
-const debouncedUpdateSearch = debounce((query) => {
-  state.searchQuery = query
-  window.dispatchEvent(new Event('content-update'))
-}, 300)
-
-export function clearSearch() {
-  state.searchQuery = ''
-  document.getElementById('song-search').value = ''
-  window.dispatchEvent(new Event('content-update'))
 }
 
 export function AddSongForm(currentUser) {
