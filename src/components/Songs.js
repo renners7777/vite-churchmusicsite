@@ -23,7 +23,29 @@ function debounce(func, wait) {
   }
 }
 
+// Initialize handlers for the component
+function initializeHandlers() {
+  // Remove any existing handlers first
+  document.removeEventListener('click', handlePlaylistAction)
+  document.removeEventListener('content-update', loadSongs)
+
+  // Add the handlers
+  document.addEventListener('click', handlePlaylistAction)
+  document.addEventListener('content-update', loadSongs)
+
+  // Set up window handlers for search
+  window.handleSearchInput = handleSearchInput
+  window.handleSearchKeyDown = handleSearchKeyDown
+  window.clearSearch = clearSearch
+}
+
 export async function SongsList(currentUser) {
+  // Initialize handlers when component is mounted
+  initializeHandlers()
+
+  // Load initial data
+  await loadSongs()
+
   if (!currentUser) {
     return `
       <div class="container mx-auto p-8 text-center">
@@ -410,15 +432,3 @@ async function addSongToPlaylist(songId, playlistId) {
     window.dispatchEvent(new Event('content-update'))
   }
 }
-
-// Initialize all handlers
-window.handleSearchInput = handleSearchInput
-window.handleSearchKeyDown = handleSearchKeyDown
-window.clearSearch = clearSearch
-
-// Add event delegation for playlist actions
-document.addEventListener('click', handlePlaylistAction)
-document.addEventListener('content-update', () => {
-  // Reload songs and playlists when content changes
-  loadSongs()
-})

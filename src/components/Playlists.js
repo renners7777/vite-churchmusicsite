@@ -1,6 +1,18 @@
 import supabase from '../services/supabase.js'
 
+// Initialize handlers for the component
+function initializeHandlers() {
+  // Remove any existing handlers first
+  document.removeEventListener('click', handlePlaylistAction)
+
+  // Add the handlers
+  document.addEventListener('click', handlePlaylistAction)
+}
+
 export async function PlaylistsView(currentUser) {
+  // Initialize handlers when component is mounted
+  initializeHandlers()
+
   if (!currentUser) {
     return `
       <div class="container mx-auto p-8 text-center">
@@ -260,6 +272,3 @@ export function handlePlaylistAction(event) {
       break
   }
 }
-
-// Initialize playlist handlers
-document.addEventListener('click', handlePlaylistAction)
