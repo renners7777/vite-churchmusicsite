@@ -45,9 +45,18 @@ function initializeHandlers() {
 // Extract YouTube video ID from URL
 function getYouTubeVideoId(url) {
   if (!url) return null
-  const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/
-  const match = url.match(regExp)
-  return (match && match[2].length === 11) ? match[2] : null
+  try {
+    const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/
+    const match = url.match(regExp)
+    const videoId = (match && match[2].length === 11) ? match[2] : null
+    if (!videoId) {
+      console.warn('Invalid YouTube URL format:', url)
+    }
+    return videoId
+  } catch (error) {
+    console.error('Error parsing YouTube URL:', error)
+    return null
+  }
 }
 
 // Handle video modal interactions
@@ -58,11 +67,29 @@ function handleVideoModal(event) {
 
   if (videoBtn) {
     const videoId = videoBtn.dataset.videoId
+    if (!videoId) {
+      alert('Sorry, this video URL appears to be invalid.')
+      return
+    }
     state.activeVideoId = videoId
     window.dispatchEvent(new Event('content-update'))
+    // Focus trap for accessibility
+    setTimeout(() => {
+      const closeButton = document.querySelector('[data-action="close-modal"]')
+      if (closeButton) closeButton.focus()
+    }, 100)
   }
 
   if (closeBtn || (modal && event.target === modal)) {
+    state.activeVideoId = null
+    window.dispatchEvent(new Event('content-update'))
+    // Return focus to the play button
+    const playButton = document.querySelector(`[data-video-id="${state.activeVideoId}"]`)
+    if (playButton) playButton.focus()
+  }
+
+  // Handle Escape key
+  if (event.key === 'Escape' && state.activeVideoId) {
     state.activeVideoId = null
     window.dispatchEvent(new Event('content-update'))
   }
@@ -264,26 +291,38 @@ export async function SongsList(currentUser) {
       </div>
 
       ${state.activeVideoId ? `
-        <div id="video-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div class="bg-white p-4 rounded-lg shadow-lg max-w-3xl w-full mx-4">
-            <div class="flex justify-between items-center mb-4">
-              <h3 class="text-xl font-semibold">Now Playing</h3>
+        <div 
+          id="video-modal" 
+          class="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4 md:p-8"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="video-modal-title"
+          onclick="handleVideoModal(event)"
+          onkeydown="if(event.key==='Escape')handleVideoModal(event)"
+        >
+          <div class="bg-white rounded-lg shadow-lg max-w-4xl w-full mx-auto overflow-hidden">
+            <div class="flex justify-between items-center p-4 border-b">
+              <h3 id="video-modal-title" class="text-xl font-semibold">Now Playing</h3>
               <button 
                 data-action="close-modal"
-                class="text-gray-500 hover:text-gray-700"
+                class="text-gray-500 hover:text-gray-700 p-2 rounded-full hover:bg-gray-100 transition-colors"
                 aria-label="Close video"
               >
-                ✕
+                <span aria-hidden="true" class="text-xl">✕</span>
               </button>
             </div>
-            <div class="relative" style="padding-bottom: 56.25%">
+            <div class="relative bg-black" style="padding-bottom: 56.25%">
+              <div class="absolute inset-0 flex items-center justify-center">
+                <div class="loading-spinner"></div>
+              </div>
               <iframe
                 class="absolute inset-0 w-full h-full"
-                src="https://www.youtube.com/embed/${state.activeVideoId}?autoplay=1"
+                src="https://www.youtube.com/embed/${state.activeVideoId}?autoplay=1&rel=0"
                 title="YouTube video player"
                 frameborder="0"
                 allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                 allowfullscreen
+                onload="this.previousElementSibling.style.display='none'"
               ></iframe>
             </div>
           </div>
