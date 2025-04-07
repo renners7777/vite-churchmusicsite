@@ -123,36 +123,53 @@ export async function loadSongs() {
 
 // Handle search input with debounce
 export function handleSearchInput(event) {
-  // Prevent the event from bubbling up
-  event.stopPropagation()
-  event.preventDefault()
+  // Get the input value
+  const query = event.target.value.trim()
   
-  // Update the input value immediately
-  const query = event.target.value
-  const input = event.target
-  input.value = query
-
-  // Debounce the state update and re-render
+  // Update the input value in case we modified it
+  event.target.value = query
+  
+  // Update search immediately for responsive UI
+  state.searchQuery = query
+  
+  // Debounce the re-render to avoid excessive updates
   debouncedUpdateSearch(query)
 }
 
-// Prevent navigation on backspace
+// Prevent navigation on backspace and handle special keys
 export function handleSearchKeyDown(event) {
-  if (event.key === 'Backspace') {
-    event.stopPropagation()
+  // Stop event propagation for all keyboard events in the search
+  event.stopPropagation()
+  
+  // Handle escape to clear search
+  if (event.key === 'Escape') {
+    clearSearch()
+    event.preventDefault()
   }
 }
 
 // Debounced function to update search state
 const debouncedUpdateSearch = debounce((query) => {
-  state.searchQuery = query
-  window.dispatchEvent(new Event('content-update'))
+  // Only trigger re-render if the query has actually changed
+  if (state.searchQuery !== query) {
+    state.searchQuery = query
+    window.dispatchEvent(new Event('content-update'))
+  }
 }, 300)
 
 export function clearSearch() {
+  const searchInput = document.getElementById('song-search')
+  if (searchInput) {
+    searchInput.value = ''
+    searchInput.focus()
+  }
   state.searchQuery = ''
-  document.getElementById('song-search').value = ''
   window.dispatchEvent(new Event('content-update'))
+}
+
+// Helper function to normalize text for searching
+function normalizeText(text) {
+  return text ? text.toLowerCase().trim() : ''
 }
 
 export async function SongsList(currentUser) {
@@ -173,37 +190,48 @@ export async function SongsList(currentUser) {
     `
   }
 
-  const filteredSongs = state.searchQuery
-    ? state.songs.filter(song => 
-        song.title.toLowerCase().includes(state.searchQuery.toLowerCase()) ||
-        (song.author && song.author.toLowerCase().includes(state.searchQuery.toLowerCase()))
-      )
+  const normalizedQuery = normalizeText(state.searchQuery)
+  
+  const filteredSongs = normalizedQuery
+    ? state.songs.filter(song => {
+        const normalizedTitle = normalizeText(song.title)
+        const normalizedAuthor = normalizeText(song.author)
+        const normalizedLyrics = normalizeText(song.lyrics)
+        
+        return normalizedTitle.includes(normalizedQuery) ||
+               normalizedAuthor.includes(normalizedQuery) ||
+               normalizedLyrics?.includes(normalizedQuery)
+      })
     : state.songs
 
   const searchBar = `
     <div class="mb-6">
       <div class="flex gap-4 items-center">
-        <div class="flex-1">
+        <div class="flex-1 relative">
           <input
             type="search"
             id="song-search"
-            class="input"
-            placeholder="Search songs..."
+            class="input pr-10 w-full"
+            placeholder="Search by title, author, or lyrics..."
             value="${state.searchQuery}"
             onkeydown="handleSearchKeyDown(event)"
             oninput="handleSearchInput(event)"
             aria-label="Search songs"
+            autocomplete="off"
           />
+          ${state.searchQuery ? `
+            <button
+              onclick="clearSearch()"
+              class="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+              aria-label="Clear search"
+            >
+              <span aria-hidden="true">✕</span>
+            </button>
+          ` : ''}
         </div>
-        ${state.searchQuery ? `
-          <button
-            onclick="clearSearch()"
-            class="button-icon"
-            aria-label="Clear search"
-          >
-            ❌
-          </button>
-        ` : ''}
+        <div class="text-sm text-gray-500" role="status" aria-live="polite">
+          ${filteredSongs.length} ${filteredSongs.length === 1 ? 'song' : 'songs'} found
+        </div>
       </div>
     </div>
   `
