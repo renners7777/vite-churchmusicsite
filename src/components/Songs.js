@@ -25,23 +25,6 @@ function debounce(func, wait) {
   }
 }
 
-// Initialize handlers for the component
-function initializeHandlers() {
-  if (state.isInitialized) return; // Prevent multiple initializations
-  
-  // Remove any existing handlers first
-  document.removeEventListener('click', handlePlaylistAction)
-  document.removeEventListener('content-update', loadSongs)
-  document.removeEventListener('click', handleVideoModal)
-
-  // Add handlers
-  document.addEventListener('click', handlePlaylistAction)
-  document.addEventListener('click', handleVideoModal)
-  
-  // Mark as initialized
-  state.isInitialized = true;
-}
-
 // Extract YouTube video ID from URL
 function getYouTubeVideoId(url) {
   if (!url) return null
@@ -95,8 +78,59 @@ function handleVideoModal(event) {
   }
 }
 
+// Handle search input with debounce
+function handleSearchInput(event) {
+  // Get the input value and prevent event bubbling
+  event.stopPropagation()
+  const query = event.target.value
+  
+  // Update search immediately for responsive UI
+  state.searchQuery = query
+  
+  // Debounce the re-render to avoid excessive updates
+  debouncedUpdateSearch(query)
+}
+
+// Prevent navigation on backspace and handle special keys
+function handleSearchKeyDown(event) {
+  // Stop event propagation for all keyboard events in the search
+  event.stopPropagation()
+  
+  // Handle escape to clear search
+  if (event.key === 'Escape') {
+    clearSearch()
+    event.preventDefault()
+  }
+}
+
+// Clear search input and state
+function clearSearch() {
+  const searchInput = document.getElementById('song-search')
+  if (searchInput) {
+    searchInput.value = ''
+    searchInput.focus()
+  }
+  state.searchQuery = ''
+  window.dispatchEvent(new Event('content-update'))
+}
+
+// Debounced function to update search state
+const debouncedUpdateSearch = debounce((query) => {
+  // Trim the query only when updating the search state
+  const trimmedQuery = query.trim()
+  if (state.searchQuery !== trimmedQuery) {
+    state.searchQuery = trimmedQuery
+    window.dispatchEvent(new Event('content-update'))
+  }
+}, 300)
+
+// Helper function to normalize text for searching
+function normalizeText(text) {
+  return text ? text.toLowerCase().trim() : ''
+}
+
 // Load all songs from the database
-export async function loadSongs() {
+async function loadSongs() {
   state.loading = true
   window.dispatchEvent(new Event('content-update'))
 
@@ -121,57 +155,131 @@ export async function loadSongs() {
   }
 }
 
-// Handle search input with debounce
-export function handleSearchInput(event) {
-  // Get the input value and prevent event bubbling
-  event.stopPropagation()
-  const query = event.target.value
-  
-  // Update search immediately for responsive UI
-  state.searchQuery = query
-  
-  // Debounce the re-render to avoid excessive updates
-  debouncedUpdateSearch(query)
-}
+// Event delegation handler for playlist actions
+function handlePlaylistAction(event) {
+  const target = event.target
+  const action = target.dataset.action
 
-// Prevent navigation on backspace and handle special keys
-export function handleSearchKeyDown(event) {
-  // Stop event propagation for all keyboard events in the search
-  event.stopPropagation()
-  
-  // Handle escape to clear search
-  if (event.key === 'Escape') {
-    clearSearch()
-    event.preventDefault()
+  if (!action) return
+
+  if (action === 'toggle-playlist') {
+    const songId = target.dataset.songId
+    togglePlaylistDropdown(songId)
+  } else if (action === 'add-to-playlist') {
+    const songId = target.dataset.songId
+    const playlistId = target.dataset.playlistId
+    addSongToPlaylist(songId, playlistId)
   }
 }
 
-// Debounced function to update search state
-const debouncedUpdateSearch = debounce((query) => {
-  // Trim the query only when updating the search state
-  const trimmedQuery = query.trim()
-  if (state.searchQuery !== trimmedQuery) {
-    state.searchQuery = trimmedQuery
+// Toggle playlist dropdown
+function togglePlaylistDropdown(songId) {
+  // Close any open dropdowns first
+  document.querySelectorAll('.dropdown').forEach(dropdown => {
+    if (dropdown.id !== `playlist-dropdown-${songId}`) {
+      dropdown.classList.add('hidden')
+    }
+  })
+
+  const dropdown = document.getElementById(`playlist-dropdown-${songId}`)
+  const button = dropdown.previousElementSibling
+  const isExpanded = dropdown.classList.contains('hidden')
+  
+  dropdown.classList.toggle('hidden')
+  button.setAttribute('aria-expanded', isExpanded)
+}
+
+// Add song to playlist
+async function addSongToPlaylist(songId, playlistId) {
+  if (!window.currentUser) {
+    alert('Please login to add songs to playlists')
+    return
+  }
+
+  // Set loading state
+  state.addingToPlaylist = songId
+  window.dispatchEvent(new Event('content-update'))
+
+  try {
+    // Check if song is already in playlist
+    const { data: existing } = await supabase
+      .from('playlist_songs')
+      .select('id')
+      .eq('playlist_id', playlistId)
+      .eq('song_id', songId)
+      .single()
+
+    if (existing) {
+      alert('This song is already in the playlist')
+      return
+    }
+
+    // Get the current highest position in the playlist
+    const { data: positions } = await supabase
+      .from('playlist_songs')
+      .select('position')
+      .eq('playlist_id', playlistId)
+      .order('position', { ascending: false })
+      .limit(1)
+
+    const nextPosition = positions?.[0]?.position ? positions[0].position + 1 : 0
+
+    // Add the song to the playlist
+    const { error } = await supabase
+      .from('playlist_songs')
+      .insert([
+        {
+          playlist_id: playlistId,
+          song_id: songId,
+          position: nextPosition
+        }
+      ])
+
+    if (error) {
+      alert('Error adding song to playlist: ' + error.message)
+      return
+    }
+
+    // Hide the dropdown
+    const dropdown = document.getElementById(`playlist-dropdown-${songId}`)
+    const button = dropdown.previousElementSibling
+    dropdown.classList.add('hidden')
+    button.setAttribute('aria-expanded', 'false')
+
+    // Show success message
+    alert('Song added to playlist successfully!')
+  } finally {
+    // Clear loading state and refresh playlists
+    state.addingToPlaylist = null
+    await loadSongs() // Refresh playlists data
     window.dispatchEvent(new Event('content-update'))
   }
-}, 300)
-
-export function clearSearch() {
-  const searchInput = document.getElementById('song-search')
-  if (searchInput) {
-    searchInput.value = ''
-    searchInput.focus()
-  }
-  state.searchQuery = ''
-  window.dispatchEvent(new Event('content-update'))
 }
 
-// Helper function to normalize text for searching
-function normalizeText(text) {
-  return text ? text.toLowerCase().trim() : ''
+// Initialize handlers for the component
+function initializeHandlers() {
+  if (state.isInitialized) return; // Prevent multiple initializations
+  
+  // Remove any existing handlers first
+  document.removeEventListener('click', handlePlaylistAction)
+  document.removeEventListener('content-update', loadSongs)
+  document.removeEventListener('click', handleVideoModal)
+
+  // Add handlers
+  document.addEventListener('click', handlePlaylistAction)
+  document.addEventListener('click', handleVideoModal)
+  
+  // Expose functions to window for inline event handlers
+  window.handleSearchInput = handleSearchInput
+  window.handleSearchKeyDown = handleSearchKeyDown
+  window.clearSearch = clearSearch
+  
+  // Mark as initialized
+  state.isInitialized = true;
 }
 
-export async function SongsList(currentUser) {
+// Expose functions to window for inline event handlers
+window.SongsList = async function(currentUser) {
   // Initialize handlers when component is mounted
   initializeHandlers()
 
@@ -368,7 +476,8 @@ export async function SongsList(currentUser) {
   `
 }
 
-export function AddSongForm(currentUser) {
+// Expose function to window for inline event handlers
+window.AddSongForm = function(currentUser) {
   if (!currentUser) {
     return `
       <div class="container mx-auto p-8 text-center">
@@ -426,7 +535,8 @@ export function AddSongForm(currentUser) {
   `
 }
 
-export async function handleAddSong(event, currentUser) {
+// Expose function to window for inline event handlers
+window.handleAddSong = async function(event, currentUser) {
   event.preventDefault()
   if (!currentUser) {
     alert('Please login to add songs')
@@ -459,103 +569,7 @@ export async function handleAddSong(event, currentUser) {
   window.dispatchEvent(new Event('content-update'))
 }
 
-// Event delegation handler for playlist actions
-export function handlePlaylistAction(event) {
-  const target = event.target
-  const action = target.dataset.action
-
-  if (!action) return
-
-  if (action === 'toggle-playlist') {
-    const songId = target.dataset.songId
-    togglePlaylistDropdown(songId)
-  } else if (action === 'add-to-playlist') {
-    const songId = target.dataset.songId
-    const playlistId = target.dataset.playlistId
-    addSongToPlaylist(songId, playlistId)
-  }
-}
-
-// Toggle playlist dropdown
-function togglePlaylistDropdown(songId) {
-  // Close any open dropdowns first
-  document.querySelectorAll('.dropdown').forEach(dropdown => {
-    if (dropdown.id !== `playlist-dropdown-${songId}`) {
-      dropdown.classList.add('hidden')
-    }
-  })
-
-  const dropdown = document.getElementById(`playlist-dropdown-${songId}`)
-  const button = dropdown.previousElementSibling
-  const isExpanded = dropdown.classList.contains('hidden')
-  
-  dropdown.classList.toggle('hidden')
-  button.setAttribute('aria-expanded', isExpanded)
-}
-
-// Add song to playlist
-async function addSongToPlaylist(songId, playlistId) {
-  if (!window.currentUser) {
-    alert('Please login to add songs to playlists')
-    return
-  }
-
-  // Set loading state
-  state.addingToPlaylist = songId
-  window.dispatchEvent(new Event('content-update'))
-
-  try {
-    // Check if song is already in playlist
-    const { data: existing } = await supabase
-      .from('playlist_songs')
-      .select('id')
-      .eq('playlist_id', playlistId)
-      .eq('song_id', songId)
-      .single()
-
-    if (existing) {
-      alert('This song is already in the playlist')
-      return
-    }
-
-    // Get the current highest position in the playlist
-    const { data: positions } = await supabase
-      .from('playlist_songs')
-      .select('position')
-      .eq('playlist_id', playlistId)
-      .order('position', { ascending: false })
-      .limit(1)
-
-    const nextPosition = positions?.[0]?.position ? positions[0].position + 1 : 0
-
-    // Add the song to the playlist
-    const { error } = await supabase
-      .from('playlist_songs')
-      .insert([
-        {
-          playlist_id: playlistId,
-          song_id: songId,
-          position: nextPosition
-        }
-      ])
-
-    if (error) {
-      alert('Error adding song to playlist: ' + error.message)
-      return
-    }
-
-    // Hide the dropdown
-    const dropdown = document.getElementById(`playlist-dropdown-${songId}`)
-    const button = dropdown.previousElementSibling
-    dropdown.classList.add('hidden')
-    button.setAttribute('aria-expanded', 'false')
-
-    // Show success message
-    alert('Song added to playlist successfully!')
-  } finally {
-    // Clear loading state and refresh playlists
-    state.addingToPlaylist = null
-    await loadSongs() // Refresh playlists data
-    window.dispatchEvent(new Event('content-update'))
-  }
-}
+// Expose functions to window for inline event handlers
+window.handleSearchInput = handleSearchInput
+window.handleSearchKeyDown = handleSearchKeyDown
+window.clearSearch = clearSearch
