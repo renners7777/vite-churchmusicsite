@@ -144,22 +144,6 @@ export async function SongsList(currentUser) {
                     </div>
                   </div>
                 ` : ''}
-                ${song.created_by === currentUser.id ? `
-                  <button 
-                    onclick="handleEditSong(${song.id})"
-                    class="button-icon"
-                    aria-label="Edit ${song.title}"
-                  >
-                    ✏️
-                  </button>
-                  <button 
-                    onclick="handleDeleteSong(${song.id})"
-                    class="button-icon"
-                    aria-label="Delete ${song.title}"
-                  >
-                    🗑️
-                  </button>
-                ` : ''}
               </div>
             </div>
             <p class="text-gray-600 mb-4">By ${song.author || 'Unknown'}</p>
@@ -327,76 +311,8 @@ export async function handleAddSong(event, currentUser) {
   window.dispatchEvent(new Event('content-update'))
 }
 
-export async function handleEditSong(songId, currentUser) {
-  if (!currentUser) {
-    alert('Please login to edit songs')
-    return
-  }
-
-  const { data: song, error } = await supabase
-    .from('songs')
-    .select('*')
-    .eq('id', songId)
-    .single()
-
-  if (error) {
-    alert('Error fetching song: ' + error.message)
-    return
-  }
-
-  const newTitle = prompt('Enter new title:', song.title)
-  if (!newTitle) return
-
-  const newAuthor = prompt('Enter new author:', song.author)
-  if (!newAuthor) return
-
-  const newYoutubeUrl = prompt('Enter new YouTube URL:', song.youtube_url)
-
-  const { error: updateError } = await supabase
-    .from('songs')
-    .update({ 
-      title: newTitle, 
-      author: newAuthor, 
-      youtube_url: newYoutubeUrl,
-      updated_by: currentUser.id
-    })
-    .eq('id', songId)
-
-  if (updateError) {
-    alert('Error updating song: ' + updateError.message)
-    return
-  }
-
-  window.dispatchEvent(new Event('content-update'))
-}
-
-export async function handleDeleteSong(songId, currentUser) {
-  if (!currentUser) {
-    alert('Please login to delete songs')
-    return
-  }
-
-  if (!confirm('Are you sure you want to delete this song?')) {
-    return
-  }
-
-  const { error } = await supabase
-    .from('songs')
-    .delete()
-    .eq('id', songId)
-
-  if (error) {
-    alert('Error deleting song: ' + error.message)
-    return
-  }
-
-  window.dispatchEvent(new Event('content-update'))
-}
-
 // Initialize all handlers
 window.handleAddSong = (event) => handleAddSong(event, window.currentUser)
-window.handleEditSong = (songId) => handleEditSong(songId, window.currentUser)
-window.handleDeleteSong = (songId) => handleDeleteSong(songId, window.currentUser)
 window.handleSearchInput = handleSearchInput
 window.handleSearchKeyDown = handleSearchKeyDown
 window.clearSearch = clearSearch
