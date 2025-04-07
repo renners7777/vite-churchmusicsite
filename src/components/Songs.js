@@ -1,7 +1,9 @@
 import { marked } from 'marked'
 import supabase from '../services/supabase.js'
 
+// Store search state
 let searchTimeout = null
+let currentSearchQuery = ''
 
 export async function SongsList(currentUser, searchQuery = '') {
   if (!currentUser) {
@@ -31,13 +33,22 @@ export async function SongsList(currentUser, searchQuery = '') {
             id="song-search" 
             placeholder="Search songs..." 
             class="input pl-10"
-            value="${searchQuery}"
+            value="${currentSearchQuery}"
             oninput="handleSearchInput(event)"
             aria-label="Search songs"
           />
           <span class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
             🔍
           </span>
+          ${currentSearchQuery ? `
+            <button 
+              onclick="clearSearch()"
+              class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+              aria-label="Clear search"
+            >
+              ✕
+            </button>
+          ` : ''}
         </div>
       </div>
     </div>
@@ -48,8 +59,8 @@ export async function SongsList(currentUser, searchQuery = '') {
     .select('*')
     .order('title')
 
-  if (searchQuery) {
-    query = query.ilike('title', `%${searchQuery}%`)
+  if (currentSearchQuery) {
+    query = query.ilike('title', `%${currentSearchQuery}%`)
   }
 
   const { data: songs, error } = await query
@@ -298,8 +309,7 @@ export async function handleDeleteSong(songId, currentUser) {
 }
 
 export function handleSearchInput(event) {
-  event.preventDefault()
-  const query = event.target.value.trim()
+  const query = event.target.value
   
   // Clear any existing timeout
   if (searchTimeout) {
@@ -308,9 +318,15 @@ export function handleSearchInput(event) {
   
   // Set a new timeout to update content after user stops typing
   searchTimeout = setTimeout(() => {
-    window.history.replaceState(null, '', `#songs?search=${encodeURIComponent(query)}`)
+    currentSearchQuery = query.trim()
     window.dispatchEvent(new Event('content-update'))
-  }, 300)
+  }, 500)
+}
+
+export function clearSearch() {
+  currentSearchQuery = ''
+  document.getElementById('song-search').value = ''
+  window.dispatchEvent(new Event('content-update'))
 }
 
 // Initialize all handlers
@@ -318,3 +334,4 @@ window.handleAddSong = (event) => handleAddSong(event, window.currentUser)
 window.handleEditSong = (songId) => handleEditSong(songId, window.currentUser)
 window.handleDeleteSong = (songId) => handleDeleteSong(songId, window.currentUser)
 window.handleSearchInput = handleSearchInput
+window.clearSearch = clearSearch
