@@ -123,11 +123,9 @@ export async function loadSongs() {
 
 // Handle search input with debounce
 export function handleSearchInput(event) {
-  // Get the input value
-  const query = event.target.value.trim()
-  
-  // Update the input value in case we modified it
-  event.target.value = query
+  // Get the input value and prevent event bubbling
+  event.stopPropagation()
+  const query = event.target.value
   
   // Update search immediately for responsive UI
   state.searchQuery = query
@@ -150,9 +148,10 @@ export function handleSearchKeyDown(event) {
 
 // Debounced function to update search state
 const debouncedUpdateSearch = debounce((query) => {
-  // Only trigger re-render if the query has actually changed
-  if (state.searchQuery !== query) {
-    state.searchQuery = query
+  // Trim the query only when updating the search state
+  const trimmedQuery = query.trim()
+  if (state.searchQuery !== trimmedQuery) {
+    state.searchQuery = trimmedQuery
     window.dispatchEvent(new Event('content-update'))
   }
 }, 300)
