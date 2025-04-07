@@ -1,11 +1,14 @@
 import { marked } from 'marked'
 import supabase from '../services/supabase.js'
 
-// Store search state
-let searchTimeout = null
-let currentSearchQuery = ''
+// Global state for songs list and search
+const state = {
+  songs: [],
+  searchQuery: '',
+  loading: false
+}
 
-export async function SongsList(currentUser, searchQuery = '') {
+export async function SongsList(currentUser) {
   if (!currentUser) {
     return `
       <div class="container mx-auto p-8 text-center">
@@ -15,11 +18,17 @@ export async function SongsList(currentUser, searchQuery = '') {
     `
   }
 
+  // Load songs if not already loaded
+  if (state.songs.length === 0 && !state.loading) {
+    await loadSongs()
+  }
+
   const { data: playlists } = await supabase
     .from('playlists')
     .select('id, name')
     .eq('user_id', currentUser.id)
 
+  // Search bar with loading state
   const searchBar = `
     <div>
       <div class="mb-6">
@@ -32,20 +41,21 @@ export async function SongsList(currentUser, searchQuery = '') {
             type="text" 
             id="song-search" 
             placeholder="Search songs..." 
-            class="input pl-10"
-            value="${currentSearchQuery}"
-            onkeydown="handleSearchKeyDown(event)"
-            oninput="handleSearchInput(event)"
+            class="input pl-10 ${state.loading ? 'opacity-50' : ''}"
+            value="${state.searchQuery}"
+            oninput="handleSearch(event)"
+            ${state.loading ? 'disabled' : ''}
             aria-label="Search songs"
           />
           <span class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
-            🔍
+            ${state.loading ? '⌛' : '🔍'}
           </span>
-          ${currentSearchQuery ? `
+          ${state.searchQuery ? `
             <button 
               onclick="clearSearch()"
               class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
               aria-label="Clear search"
+              ${state.loading ? 'disabled' : ''}
             >
               ✕
             </button>
@@ -55,34 +65,37 @@ export async function SongsList(currentUser, searchQuery = '') {
     </div>
   `
 
-  let query = supabase
-    .from('songs')
-    .select('*')
-    .order('title')
+  // Filter songs based on search query
+  const filteredSongs = state.songs.filter(song => 
+    song.title.toLowerCase().includes(state.searchQuery.toLowerCase()) ||
+    (song.author && song.author.toLowerCase().includes(state.searchQuery.toLowerCase()))
+  )
 
-  if (currentSearchQuery) {
-    query = query.ilike('title', `%${currentSearchQuery}%`)
-  }
-
-  const { data: songs, error } = await query
-
-  if (error) {
+  // Show appropriate message if no songs found
+  if (filteredSongs.length === 0) {
     return `
-      <div role="alert" class="container mx-auto p-4">
-        <div class="bg-red-100 text-red-700 p-4 rounded">
-          <h2 class="font-bold">Error</h2>
-          <p>${error.message}</p>
+      <section class="container mx-auto p-4">
+        <h2 class="text-3xl font-bold mb-6">Worship Songs</h2>
+        ${searchBar}
+        <div class="text-center py-8">
+          ${state.loading ? 
+            'Loading songs...' : 
+            state.searchQuery ? 
+              'No songs found matching your search.' :
+              'No songs available.'
+          }
         </div>
-      </div>
+      </section>
     `
   }
 
+  // Render songs list
   return `
     <section class="container mx-auto p-4" aria-labelledby="songs-heading">
       <h2 id="songs-heading" class="text-3xl font-bold mb-6">Worship Songs</h2>
       ${searchBar}
       <div class="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-        ${songs.map(song => `
+        ${filteredSongs.map(song => `
           <article class="song-card" aria-labelledby="song-title-${song.id}">
             <div class="flex justify-between items-start mb-4">
               <h3 id="song-title-${song.id}" class="text-xl font-semibold">${song.title}</h3>
@@ -93,7 +106,7 @@ export async function SongsList(currentUser, searchQuery = '') {
                       onclick="togglePlaylistDropdown(${song.id})" 
                       class="button-icon"
                       aria-label="Add ${song.title} to playlist"
-                      aria-expanded="${false}"
+                      aria-expanded="false"
                       aria-controls="playlist-dropdown-${song.id}"
                     >
                       ➕
@@ -117,20 +130,22 @@ export async function SongsList(currentUser, searchQuery = '') {
                     </div>
                   </div>
                 ` : ''}
-                <button 
-                  onclick="handleEditSong(${song.id})" 
-                  class="button-icon"
-                  aria-label="Edit ${song.title}"
-                >
-                  ✏️
-                </button>
-                <button 
-                  onclick="handleDeleteSong(${song.id})" 
-                  class="button-icon text-red-600"
-                  aria-label="Delete ${song.title}"
-                >
-                  🗑️
-                </button>
+                ${song.created_by === currentUser.id ? `
+                  <button 
+                    onclick="handleEditSong(${song.id})"
+                    class="button-icon"
+                    aria-label="Edit ${song.title}"
+                  >
+                    ✏️
+                  </button>
+                  <button 
+                    onclick="handleDeleteSong(${song.id})"
+                    class="button-icon"
+                    aria-label="Delete ${song.title}"
+                  >
+                    🗑️
+                  </button>
+                ` : ''}
               </div>
             </div>
             <p class="text-gray-600 mb-4">By ${song.author || 'Unknown'}</p>
@@ -151,6 +166,40 @@ export async function SongsList(currentUser, searchQuery = '') {
       </div>
     </section>
   `
+}
+
+// Load all songs from the database
+async function loadSongs() {
+  state.loading = true
+  window.dispatchEvent(new Event('content-update'))
+
+  const { data, error } = await supabase
+    .from('songs')
+    .select('*')
+    .order('title')
+
+  if (error) {
+    console.error('Error loading songs:', error)
+    state.songs = []
+  } else {
+    state.songs = data || []
+  }
+
+  state.loading = false
+  window.dispatchEvent(new Event('content-update'))
+}
+
+// Handle search input
+export function handleSearch(event) {
+  state.searchQuery = event.target.value
+  window.dispatchEvent(new Event('content-update'))
+}
+
+// Clear search
+export function clearSearch() {
+  state.searchQuery = ''
+  document.getElementById('song-search').value = ''
+  window.dispatchEvent(new Event('content-update'))
 }
 
 export function AddSongForm(currentUser) {
@@ -332,16 +381,9 @@ export function handleSearchInput(event) {
   }, 500)
 }
 
-export function clearSearch() {
-  currentSearchQuery = ''
-  document.getElementById('song-search').value = ''
-  window.dispatchEvent(new Event('content-update'))
-}
-
 // Initialize all handlers
 window.handleAddSong = (event) => handleAddSong(event, window.currentUser)
 window.handleEditSong = (songId) => handleEditSong(songId, window.currentUser)
 window.handleDeleteSong = (songId) => handleDeleteSong(songId, window.currentUser)
-window.handleSearchInput = handleSearchInput
-window.handleSearchKeyDown = handleSearchKeyDown
+window.handleSearch = handleSearch
 window.clearSearch = clearSearch
