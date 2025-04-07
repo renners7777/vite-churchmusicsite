@@ -205,9 +205,9 @@ export async function SongsList(currentUser) {
     : state.songs
 
   const searchBar = `
-    <div class="mb-8">
+    <div class="mb-12 mx-4 sm:mx-8">
       <div class="flex flex-col md:flex-row gap-4 items-center">
-        <div class="w-full md:max-w-2xl">
+        <div class="w-full md:max-w-3xl">
           <div class="search-container">
             <span class="search-icon">
               <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
