@@ -80,18 +80,13 @@ function handleVideoModal(event) {
 
 // Handle search input with debounce
 function handleSearchInput(event) {
-  // Only handle events from the search input
-  if (event.target.id !== 'song-search') return
-  
-  // Get the input value and prevent event bubbling
-  event.stopPropagation()
-  const query = event.target.value
-  
-  // Update search immediately for responsive UI
-  state.searchQuery = query
-  
-  // Debounce the re-render to avoid excessive updates
-  debouncedUpdateSearch(query)
+  if (event.target.id !== 'song-search') return;
+
+  // Update the search query in the state
+  state.searchQuery = event.target.value;
+
+  // Debounce the search logic to avoid excessive updates
+  debouncedUpdateSearch(state.searchQuery);
 }
 
 // Prevent navigation on backspace and handle special keys
@@ -158,7 +153,7 @@ const debouncedUpdateSearch = debounce((query) => {
     state.searchQuery = trimmedQuery
     window.dispatchEvent(new Event('content-update'))
   }
-}, 300)
+}, 100)
 
 // Helper function to normalize text for searching
 function normalizeText(text) {
@@ -326,42 +321,28 @@ window.SongsList = async function(currentUser) {
     : state.songs
 
   const searchBar = `
-    <div class="mb-12 mx-4 sm:mx-8">
-      <div class="flex flex-col md:flex-row gap-4 items-center">
-        <div class="w-full md:max-w-3xl">
-          <div class="search-container">
-            <span class="search-icon">
-              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                <path fill-rule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clip-rule="evenodd" />
-              </svg>
-            </span>
-            <input
-              type="search"
-              id="song-search"
-              class="search-input"
-              placeholder="Search by title, author, or lyrics..."
-              value="${state.searchQuery}"
-              aria-label="Search songs"
-              autocomplete="off"
-            />
-            ${state.searchQuery ? `
-              <button
-                class="clear-search"
-                aria-label="Clear search"
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-                  <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd" />
-                </svg>
-              </button>
-            ` : ''}
-          </div>
-        </div>
-        <div class="search-results-count" role="status" aria-live="polite">
-          ${filteredSongs.length} ${filteredSongs.length === 1 ? 'song' : 'songs'} found
-        </div>
-      </div>
-    </div>
-  `
+  <div class="search-container">
+    <input
+      type="search"
+      id="song-search"
+      class="search-input"
+      placeholder="Search by title, author, or lyrics..."
+      value="${state.searchQuery}"
+      oninput="handleSearchInput(event)"  // Use oninput for real-time updates
+      aria-label="Search songs"
+      autocomplete="off"
+    />
+    ${state.searchQuery ? `
+      <button
+        class="clear-search"
+        aria-label="Clear search"
+        onclick="clearSearch(event)"
+      >
+        ✕
+      </button>
+    ` : ''}
+  </div>
+`;
 
   // Show appropriate message if no songs found
   if (filteredSongs.length === 0) {
