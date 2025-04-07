@@ -80,6 +80,9 @@ function handleVideoModal(event) {
 
 // Handle search input with debounce
 function handleSearchInput(event) {
+  // Only handle events from the search input
+  if (event.target.id !== 'song-search') return
+  
   // Get the input value and prevent event bubbling
   event.stopPropagation()
   const query = event.target.value
@@ -93,6 +96,9 @@ function handleSearchInput(event) {
 
 // Prevent navigation on backspace and handle special keys
 function handleSearchKeyDown(event) {
+  // Only handle events from the search input
+  if (event.target.id !== 'song-search') return
+  
   // Stop event propagation for all keyboard events in the search
   event.stopPropagation()
   
@@ -104,7 +110,8 @@ function handleSearchKeyDown(event) {
 }
 
 // Clear search input and state
-function clearSearch() {
+function clearSearch(event) {
+  if (event) event.preventDefault()
   const searchInput = document.getElementById('song-search')
   if (searchInput) {
     searchInput.value = ''
@@ -112,6 +119,35 @@ function clearSearch() {
   }
   state.searchQuery = ''
   window.dispatchEvent(new Event('content-update'))
+}
+
+// Handle click events for the clear button
+function handleClearClick(event) {
+  if (event.target.closest('.clear-search')) {
+    clearSearch()
+  }
+}
+
+// Initialize handlers for the component
+function initializeHandlers() {
+  if (state.isInitialized) return; // Prevent multiple initializations
+  
+  // Remove any existing handlers first
+  document.removeEventListener('click', handlePlaylistAction)
+  document.removeEventListener('content-update', loadSongs)
+  document.removeEventListener('click', handleVideoModal)
+  document.removeEventListener('input', handleSearchInput)
+  document.removeEventListener('keydown', handleSearchKeyDown)
+
+  // Add handlers
+  document.addEventListener('click', handlePlaylistAction)
+  document.addEventListener('click', handleVideoModal)
+  document.addEventListener('input', handleSearchInput)
+  document.addEventListener('keydown', handleSearchKeyDown)
+  document.addEventListener('click', handleClearClick)
+  
+  // Mark as initialized
+  state.isInitialized = true;
 }
 
 // Debounced function to update search state
@@ -256,28 +292,6 @@ async function addSongToPlaylist(songId, playlistId) {
   }
 }
 
-// Initialize handlers for the component
-function initializeHandlers() {
-  if (state.isInitialized) return; // Prevent multiple initializations
-  
-  // Remove any existing handlers first
-  document.removeEventListener('click', handlePlaylistAction)
-  document.removeEventListener('content-update', loadSongs)
-  document.removeEventListener('click', handleVideoModal)
-
-  // Add handlers
-  document.addEventListener('click', handlePlaylistAction)
-  document.addEventListener('click', handleVideoModal)
-  
-  // Expose functions to window for inline event handlers
-  window.handleSearchInput = handleSearchInput
-  window.handleSearchKeyDown = handleSearchKeyDown
-  window.clearSearch = clearSearch
-  
-  // Mark as initialized
-  state.isInitialized = true;
-}
-
 // Expose functions to window for inline event handlers
 window.SongsList = async function(currentUser) {
   // Initialize handlers when component is mounted
@@ -327,14 +341,11 @@ window.SongsList = async function(currentUser) {
               class="search-input"
               placeholder="Search by title, author, or lyrics..."
               value="${state.searchQuery}"
-              onkeydown="handleSearchKeyDown(event)"
-              oninput="handleSearchInput(event)"
               aria-label="Search songs"
               autocomplete="off"
             />
             ${state.searchQuery ? `
               <button
-                onclick="clearSearch()"
                 class="clear-search"
                 aria-label="Clear search"
               >
