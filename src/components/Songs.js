@@ -34,6 +34,7 @@ export async function SongsList(currentUser, searchQuery = '') {
             placeholder="Search songs..." 
             class="input pl-10"
             value="${currentSearchQuery}"
+            onkeydown="handleSearchKeyDown(event)"
             oninput="handleSearchInput(event)"
             aria-label="Search songs"
           />
@@ -308,7 +309,15 @@ export async function handleDeleteSong(songId, currentUser) {
   window.dispatchEvent(new Event('content-update'))
 }
 
+export function handleSearchKeyDown(event) {
+  // Prevent default browser back navigation on backspace
+  if (event.key === 'Backspace') {
+    event.stopPropagation()
+  }
+}
+
 export function handleSearchInput(event) {
+  event.stopPropagation() // Stop event bubbling
   const query = event.target.value
   
   // Clear any existing timeout
@@ -334,4 +343,5 @@ window.handleAddSong = (event) => handleAddSong(event, window.currentUser)
 window.handleEditSong = (songId) => handleEditSong(songId, window.currentUser)
 window.handleDeleteSong = (songId) => handleDeleteSong(songId, window.currentUser)
 window.handleSearchInput = handleSearchInput
+window.handleSearchKeyDown = handleSearchKeyDown
 window.clearSearch = clearSearch
