@@ -311,8 +311,83 @@ export async function handleAddSong(event, currentUser) {
   window.dispatchEvent(new Event('content-update'))
 }
 
+// Toggle playlist dropdown
+export function togglePlaylistDropdown(songId) {
+  // Close any open dropdowns first
+  document.querySelectorAll('.dropdown').forEach(dropdown => {
+    if (dropdown.id !== `playlist-dropdown-${songId}`) {
+      dropdown.classList.add('hidden')
+    }
+  })
+
+  const dropdown = document.getElementById(`playlist-dropdown-${songId}`)
+  const button = dropdown.previousElementSibling
+  const isExpanded = dropdown.classList.contains('hidden')
+  
+  dropdown.classList.toggle('hidden')
+  button.setAttribute('aria-expanded', isExpanded)
+}
+
+// Add song to playlist
+export async function addSongToPlaylist(songId, playlistId) {
+  if (!window.currentUser) {
+    alert('Please login to add songs to playlists')
+    return
+  }
+
+  // Check if song is already in playlist
+  const { data: existing } = await supabase
+    .from('playlist_songs')
+    .select('id')
+    .eq('playlist_id', playlistId)
+    .eq('song_id', songId)
+    .single()
+
+  if (existing) {
+    alert('This song is already in the playlist')
+    return
+  }
+
+  // Get the current highest position in the playlist
+  const { data: positions } = await supabase
+    .from('playlist_songs')
+    .select('position')
+    .eq('playlist_id', playlistId)
+    .order('position', { ascending: false })
+    .limit(1)
+
+  const nextPosition = positions?.[0]?.position ? positions[0].position + 1 : 0
+
+  // Add the song to the playlist
+  const { error } = await supabase
+    .from('playlist_songs')
+    .insert([
+      {
+        playlist_id: playlistId,
+        song_id: songId,
+        position: nextPosition
+      }
+    ])
+
+  if (error) {
+    alert('Error adding song to playlist: ' + error.message)
+    return
+  }
+
+  // Hide the dropdown
+  const dropdown = document.getElementById(`playlist-dropdown-${songId}`)
+  const button = dropdown.previousElementSibling
+  dropdown.classList.add('hidden')
+  button.setAttribute('aria-expanded', 'false')
+
+  // Show success message
+  alert('Song added to playlist successfully!')
+}
+
 // Initialize all handlers
 window.handleAddSong = (event) => handleAddSong(event, window.currentUser)
 window.handleSearchInput = handleSearchInput
 window.handleSearchKeyDown = handleSearchKeyDown
 window.clearSearch = clearSearch
+window.togglePlaylistDropdown = togglePlaylistDropdown
+window.addSongToPlaylist = addSongToPlaylist
