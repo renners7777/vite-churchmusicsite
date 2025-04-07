@@ -8,6 +8,19 @@ const state = {
   loading: false
 }
 
+// Debounce helper
+function debounce(func, wait) {
+  let timeout
+  return function executedFunction(...args) {
+    const later = () => {
+      clearTimeout(timeout)
+      func(...args)
+    }
+    clearTimeout(timeout)
+    timeout = setTimeout(later, wait)
+  }
+}
+
 export async function SongsList(currentUser) {
   if (!currentUser) {
     return `
@@ -43,7 +56,8 @@ export async function SongsList(currentUser) {
             placeholder="Search songs..." 
             class="input pl-10 ${state.loading ? 'opacity-50' : ''}"
             value="${state.searchQuery}"
-            oninput="handleSearch(event)"
+            onkeydown="handleSearchKeyDown(event)"
+            oninput="handleSearchInput(event)"
             ${state.loading ? 'disabled' : ''}
             aria-label="Search songs"
           />
@@ -189,13 +203,34 @@ async function loadSongs() {
   window.dispatchEvent(new Event('content-update'))
 }
 
-// Handle search input
-export function handleSearch(event) {
-  state.searchQuery = event.target.value
-  window.dispatchEvent(new Event('content-update'))
+// Handle search input with debounce
+export function handleSearchInput(event) {
+  // Prevent the event from bubbling up
+  event.stopPropagation()
+  event.preventDefault()
+  
+  // Update the input value immediately
+  const query = event.target.value
+  const input = event.target
+  input.value = query
+
+  // Debounce the state update and re-render
+  debouncedUpdateSearch(query)
 }
 
-// Clear search
+// Prevent navigation on backspace
+export function handleSearchKeyDown(event) {
+  if (event.key === 'Backspace') {
+    event.stopPropagation()
+  }
+}
+
+// Debounced function to update search state
+const debouncedUpdateSearch = debounce((query) => {
+  state.searchQuery = query
+  window.dispatchEvent(new Event('content-update'))
+}, 300)
+
 export function clearSearch() {
   state.searchQuery = ''
   document.getElementById('song-search').value = ''
@@ -358,32 +393,10 @@ export async function handleDeleteSong(songId, currentUser) {
   window.dispatchEvent(new Event('content-update'))
 }
 
-export function handleSearchKeyDown(event) {
-  // Prevent default browser back navigation on backspace
-  if (event.key === 'Backspace') {
-    event.stopPropagation()
-  }
-}
-
-export function handleSearchInput(event) {
-  event.stopPropagation() // Stop event bubbling
-  const query = event.target.value
-  
-  // Clear any existing timeout
-  if (searchTimeout) {
-    clearTimeout(searchTimeout)
-  }
-  
-  // Set a new timeout to update content after user stops typing
-  searchTimeout = setTimeout(() => {
-    currentSearchQuery = query.trim()
-    window.dispatchEvent(new Event('content-update'))
-  }, 500)
-}
-
 // Initialize all handlers
 window.handleAddSong = (event) => handleAddSong(event, window.currentUser)
 window.handleEditSong = (songId) => handleEditSong(songId, window.currentUser)
 window.handleDeleteSong = (songId) => handleDeleteSong(songId, window.currentUser)
-window.handleSearch = handleSearch
+window.handleSearchInput = handleSearchInput
+window.handleSearchKeyDown = handleSearchKeyDown
 window.clearSearch = clearSearch
