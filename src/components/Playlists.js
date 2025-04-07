@@ -40,7 +40,7 @@ export async function PlaylistsView(currentUser) {
       <div class="flex justify-between items-center mb-6">
         <h2 id="playlists-heading" class="text-3xl font-bold">My Playlists</h2>
         <button 
-          onclick="handleCreatePlaylist()" 
+          data-action="create-playlist"
           class="button"
           aria-label="Create a new playlist"
         >
@@ -59,14 +59,16 @@ export async function PlaylistsView(currentUser) {
               </h3>
               <div class="flex space-x-2">
                 <button 
-                  onclick="handleEditPlaylist('${playlist.id}')" 
+                  data-action="edit-playlist"
+                  data-playlist-id="${playlist.id}"
                   class="button-icon"
                   aria-label="Edit ${playlist.name}"
                 >
                   ✏️
                 </button>
                 <button 
-                  onclick="handleDeletePlaylist('${playlist.id}')" 
+                  data-action="delete-playlist"
+                  data-playlist-id="${playlist.id}"
                   class="button-icon text-red-600"
                   aria-label="Delete ${playlist.name}"
                 >
@@ -97,7 +99,9 @@ export async function PlaylistsView(currentUser) {
                         }
                       </div>
                       <button 
-                        onclick="removeSongFromPlaylist('${playlist.id}', ${ps.songs.id})"
+                        data-action="remove-song"
+                        data-playlist-id="${playlist.id}"
+                        data-song-id="${ps.songs.id}"
                         class="button-icon text-red-600"
                         aria-label="Remove ${ps.songs.title} from ${playlist.name}"
                       >
@@ -231,15 +235,31 @@ export async function removeSongFromPlaylist(playlistId, songId) {
   window.dispatchEvent(new Event('content-update'))
 }
 
-// Initialize playlist handlers
-window.handleCreatePlaylist = () => handleCreatePlaylist(window.currentUser)
-window.handleEditPlaylist = (playlistId) => handleEditPlaylist(playlistId, window.currentUser)
-window.handleDeletePlaylist = handleDeletePlaylist
-window.addSongToPlaylist = addSongToPlaylist
-window.removeSongFromPlaylist = removeSongFromPlaylist
-window.togglePlaylistDropdown = (songId) => {
-  const dropdown = document.getElementById(`playlist-dropdown-${songId}`)
-  const button = dropdown.previousElementSibling
-  const isExpanded = dropdown.classList.toggle('hidden')
-  button.setAttribute('aria-expanded', !isExpanded)
+// Event delegation handler for playlist actions
+export function handlePlaylistAction(event) {
+  const target = event.target
+  const action = target.dataset.action
+
+  if (!action) return
+
+  const playlistId = target.dataset.playlistId
+  const songId = target.dataset.songId
+
+  switch (action) {
+    case 'create-playlist':
+      handleCreatePlaylist(window.currentUser)
+      break
+    case 'edit-playlist':
+      handleEditPlaylist(playlistId, window.currentUser)
+      break
+    case 'delete-playlist':
+      handleDeletePlaylist(playlistId)
+      break
+    case 'remove-song':
+      removeSongFromPlaylist(playlistId, songId)
+      break
+  }
 }
+
+// Initialize playlist handlers
+document.addEventListener('click', handlePlaylistAction)

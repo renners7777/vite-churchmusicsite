@@ -306,6 +306,7 @@ export async function handleAddSong(event, currentUser) {
 
   event.target.reset()
   window.location.hash = '#songs'
+  await loadSongs() // Refresh playlists data
   window.dispatchEvent(new Event('content-update'))
 }
 
@@ -403,17 +404,21 @@ async function addSongToPlaylist(songId, playlistId) {
     // Show success message
     alert('Song added to playlist successfully!')
   } finally {
-    // Clear loading state
+    // Clear loading state and refresh playlists
     state.addingToPlaylist = null
+    await loadSongs() // Refresh playlists data
     window.dispatchEvent(new Event('content-update'))
   }
 }
 
 // Initialize all handlers
-window.handleAddSong = (event) => handleAddSong(event, window.currentUser)
 window.handleSearchInput = handleSearchInput
 window.handleSearchKeyDown = handleSearchKeyDown
 window.clearSearch = clearSearch
 
 // Add event delegation for playlist actions
 document.addEventListener('click', handlePlaylistAction)
+document.addEventListener('content-update', () => {
+  // Reload songs and playlists when content changes
+  loadSongs()
+})
