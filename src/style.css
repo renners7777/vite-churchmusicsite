@@ -124,3 +124,7 @@ body {
     100% { transform: rotate(360deg); }
   }
 }
+
+.search-input {
+  @apply block w-full pl-12 pr-10 py-3 text-gray-900 placeholder-gray-500 border-none rounded-lg focus:outline-none focus:ring-0 sm:text-sm;
+}

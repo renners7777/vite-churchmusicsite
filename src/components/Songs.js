@@ -291,7 +291,7 @@ function renderSearchBar() {
   return `
     <div class="search-container">
       <input
-        type="search"
+        type="text" <!-- Change from "search" to "text" -->
         id="song-search"
         class="search-input"
         placeholder="Search by title, author, or lyrics..."
@@ -566,6 +566,19 @@ window.handleAddSong = async function(event, currentUser) {
 }
 
 // Expose functions to window for inline event handlers
-window.handleSearchInput = handleSearchInput
+window.handleSearchInput = (event) => {
+  console.log('Input event triggered:', event.target.value); // Debugging
+  window.searchQuery = event.target.value;
+
+  // Update only the song list, not the entire app
+  SongsList(window.currentUser, window.searchQuery).then(content => {
+    const mainContent = document.querySelector('main');
+    if (mainContent) {
+      mainContent.innerHTML = content;
+    }
+  });
+};
 window.handleSearchKeyDown = handleSearchKeyDown
 window.clearSearch = clearSearch
+
+
