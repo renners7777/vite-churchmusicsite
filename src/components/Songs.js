@@ -291,12 +291,13 @@ function renderSearchBar() {
   return `
     <div class="search-container">
       <input
-        type="text" <!-- Change from "search" to "text" -->
+        type="text"
         id="song-search"
         class="search-input"
         placeholder="Search by title, author, or lyrics..."
-        value="${state.searchQuery}"  // Bind input value to state.searchQuery
-        oninput="handleSearchInput(event)"  // Trigger search logic on input
+        value=""
+        oninput="handleSearchInput(event)"
+        onkeydown="handleSearchKeyDown(event)" <!-- Ensure this matches the function name -->
         aria-label="Search songs"
         autocomplete="off"
       />
@@ -566,19 +567,8 @@ window.handleAddSong = async function(event, currentUser) {
 }
 
 // Expose functions to window for inline event handlers
-window.handleSearchInput = (event) => {
-  console.log('Input event triggered:', event.target.value); // Debugging
-  window.searchQuery = event.target.value;
-
-  // Update only the song list, not the entire app
-  SongsList(window.currentUser, window.searchQuery).then(content => {
-    const mainContent = document.querySelector('main');
-    if (mainContent) {
-      mainContent.innerHTML = content;
-    }
-  });
-};
-window.handleSearchKeyDown = handleSearchKeyDown
-window.clearSearch = clearSearch
+window.handleSearchInput = handleSearchInput;
+window.handleSearchKeyDown = handleSearchKeyDown; // Add this line
+window.clearSearch = clearSearch;
 
 
