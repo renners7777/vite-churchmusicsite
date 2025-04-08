@@ -571,10 +571,11 @@ window.handleSearchInput = handleSearchInput;
 window.handleSearchKeyDown = handleSearchKeyDown;
 window.clearSearch = clearSearch;
 
-console.log('handleSearchKeyDown is attached to window:', window.handleSearchKeyDown);
-
 document.addEventListener('DOMContentLoaded', () => {
-  // Expose functions to window for inline event handlers
+  console.log('handleSearchKeyDown before attaching:', handleSearchKeyDown);
+  window.handleSearchKeyDown = handleSearchKeyDown;
+  console.log('handleSearchKeyDown is attached to window:', window.handleSearchKeyDown);
+
   window.handleSearchInput = handleSearchInput;
   window.handleSearchKeyDown = handleSearchKeyDown;
   window.clearSearch = clearSearch;
