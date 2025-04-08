@@ -126,21 +126,13 @@ function handleClearClick(event) {
 // Initialize handlers for the component
 function initializeHandlers() {
   if (state.isInitialized) return; // Prevent multiple initializations
-  
-  // Remove any existing handlers first
-  document.removeEventListener('click', handlePlaylistAction)
-  document.removeEventListener('content-update', loadSongs)
-  document.removeEventListener('click', handleVideoModal)
-  document.removeEventListener('input', handleSearchInput)
-  document.removeEventListener('keydown', handleSearchKeyDown)
 
-  // Add handlers
-  document.addEventListener('click', handlePlaylistAction)
-  document.addEventListener('click', handleVideoModal)
-  document.addEventListener('input', handleSearchInput)
-  document.addEventListener('keydown', handleSearchKeyDown)
-  document.addEventListener('click', handleClearClick)
-  
+  // Attach keydown listener to the search input dynamically
+  const searchInput = document.getElementById('song-search');
+  if (searchInput) {
+    searchInput.addEventListener('keydown', handleSearchKeyDown);
+  }
+
   // Mark as initialized
   state.isInitialized = true;
 }
