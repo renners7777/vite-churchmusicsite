@@ -62,9 +62,16 @@ async function checkSession() {
 
 // Handle search input
 window.handleSearchInput = (event) => {
-  window.searchQuery = event.target.value
-  handleRoute()
-}
+  window.searchQuery = event.target.value;
+
+  // Update only the song list, not the entire app
+  SongsList(window.currentUser, window.searchQuery).then(content => {
+    const mainContent = document.querySelector('main');
+    if (mainContent) {
+      mainContent.innerHTML = content;
+    }
+  });
+};
 
 // Initialize app
 window.addEventListener('hashchange', handleRoute)

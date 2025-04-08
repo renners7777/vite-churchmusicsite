@@ -147,13 +147,12 @@ function initializeHandlers() {
 
 // Debounced function to update search state
 const debouncedUpdateSearch = debounce((query) => {
-  // Trim the query only when updating the search state
-  const trimmedQuery = query.trim()
+  const trimmedQuery = query.trim();
   if (state.searchQuery !== trimmedQuery) {
-    state.searchQuery = trimmedQuery
-    window.dispatchEvent(new Event('content-update'))
+    state.searchQuery = trimmedQuery;
+    window.dispatchEvent(new Event('content-update'));
   }
-}, 100)
+}, 100); // Reduced debounce delay
 
 // Helper function to normalize text for searching
 function normalizeText(text) {
@@ -287,6 +286,33 @@ async function addSongToPlaylist(songId, playlistId) {
   }
 }
 
+// Render search bar
+function renderSearchBar() {
+  return `
+    <div class="search-container">
+      <input
+        type="search"
+        id="song-search"
+        class="search-input"
+        placeholder="Search by title, author, or lyrics..."
+        value="${state.searchQuery}"  // Bind input value to state.searchQuery
+        oninput="handleSearchInput(event)"  // Trigger search logic on input
+        aria-label="Search songs"
+        autocomplete="off"
+      />
+      ${state.searchQuery ? `
+        <button
+          class="clear-search"
+          aria-label="Clear search"
+          onclick="clearSearch(event)"
+        >
+          ✕
+        </button>
+      ` : ''}
+    </div>
+  `;
+}
+
 // Expose functions to window for inline event handlers
 window.SongsList = async function(currentUser) {
   // Initialize handlers when component is mounted
@@ -320,29 +346,7 @@ window.SongsList = async function(currentUser) {
       })
     : state.songs
 
-  const searchBar = `
-  <div class="search-container">
-    <input
-      type="search"
-      id="song-search"
-      class="search-input"
-      placeholder="Search by title, author, or lyrics..."
-      value="${state.searchQuery}"
-      oninput="handleSearchInput(event)"  // Use oninput for real-time updates
-      aria-label="Search songs"
-      autocomplete="off"
-    />
-    ${state.searchQuery ? `
-      <button
-        class="clear-search"
-        aria-label="Clear search"
-        onclick="clearSearch(event)"
-      >
-        ✕
-      </button>
-    ` : ''}
-  </div>
-`;
+  const searchBar = renderSearchBar();
 
   // Show appropriate message if no songs found
   if (filteredSongs.length === 0) {
