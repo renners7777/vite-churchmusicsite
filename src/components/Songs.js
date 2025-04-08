@@ -297,7 +297,7 @@ function renderSearchBar() {
         placeholder="Search by title, author, or lyrics..."
         value=""
         oninput="handleSearchInput(event)"
-        onkeydown="handleSearchKeyDown(event)" <!-- Ensure this matches the function name -->
+        onkeydown="handleSearchKeyDown(event)"
         aria-label="Search songs"
         autocomplete="off"
       />
@@ -532,7 +532,7 @@ window.AddSongForm = function(currentUser) {
   `
 }
 
-// Expose function to window for inline event handlers
+// Expose functions to window for inline event handlers
 window.handleAddSong = async function(event, currentUser) {
   event.preventDefault()
   if (!currentUser) {
@@ -570,5 +570,16 @@ window.handleAddSong = async function(event, currentUser) {
 window.handleSearchInput = handleSearchInput;
 window.handleSearchKeyDown = handleSearchKeyDown; // Add this line
 window.clearSearch = clearSearch;
+
+console.log('handleSearchKeyDown is attached to window:', window.handleSearchKeyDown);
+
+document.addEventListener('DOMContentLoaded', () => {
+  // Expose functions to window for inline event handlers
+  window.handleSearchInput = handleSearchInput;
+  window.handleSearchKeyDown = handleSearchKeyDown;
+  window.clearSearch = clearSearch;
+
+  console.log('Functions are now attached to window.');
+});
 
 
