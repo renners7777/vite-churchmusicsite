@@ -558,20 +558,14 @@ window.handleAddSong = async function(event, currentUser) {
   window.dispatchEvent(new Event('content-update'))
 }
 
-let isUpdating = false;
-
 window.handleSearchInput = (event) => {
-  if (isUpdating) return;
-  isUpdating = true;
-
   window.searchQuery = event.target.value;
 
   SongsList(window.currentUser, window.searchQuery).then(content => {
-    const mainContent = document.querySelector('main');
-    if (mainContent) {
-      mainContent.innerHTML = content;
+    const songListContainer = document.querySelector('.song-list');
+    if (songListContainer) {
+      songListContainer.innerHTML = content;
     }
-    isUpdating = false;
   });
 };
 
