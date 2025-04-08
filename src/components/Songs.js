@@ -568,7 +568,7 @@ window.handleAddSong = async function(event, currentUser) {
 
 // Expose functions to window for inline event handlers
 window.handleSearchInput = handleSearchInput;
-window.handleSearchKeyDown = handleSearchKeyDown; // Add this line
+window.handleSearchKeyDown = handleSearchKeyDown;
 window.clearSearch = clearSearch;
 
 console.log('handleSearchKeyDown is attached to window:', window.handleSearchKeyDown);
