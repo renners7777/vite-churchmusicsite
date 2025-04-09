@@ -31,14 +31,12 @@ ALTER TABLE songs ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "anyone_can_read_songs"
   ON songs
   FOR SELECT
-  TO public
   USING (true);
 
 CREATE POLICY "anyone_can_insert_songs"
   ON songs
   FOR INSERT
-  TO public
-  WITH CHECK (true);
+  USING (true);
 
 DO $$
 BEGIN
@@ -47,9 +45,10 @@ BEGIN
     FROM information_schema.columns
     WHERE table_name = 'playlists' AND column_name = 'user_id'
   ) THEN
-    ALTER TABLE playlists ALTER COLUMN user_id DROP NOT NULL;
+    EXECUTE 'ALTER TABLE playlists ALTER COLUMN user_id DROP NOT NULL';
   END IF;
-END $$;
+END;
+$$;
 
 INSERT INTO playlists (id, name, description, user_id)
 VALUES
