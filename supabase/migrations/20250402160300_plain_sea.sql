@@ -7,7 +7,6 @@
       - `title` (text, required)
       - `author` (text)
       - `youtube_url` (text)
-      - `comments` (text)
       - `created_at` (timestamp with timezone)
 
   2. Security
@@ -15,7 +14,6 @@
     - Add policies for:
       - Anyone can read songs
       - Anyone can insert songs
-      - Anyone can update comments
 */
 
 CREATE TABLE IF NOT EXISTS songs (
@@ -23,7 +21,6 @@ CREATE TABLE IF NOT EXISTS songs (
   title text NOT NULL,
   author text,
   youtube_url text,
-  comments text,
   created_at timestamptz DEFAULT now()
 );
 
@@ -31,21 +28,30 @@ CREATE TABLE IF NOT EXISTS songs (
 ALTER TABLE songs ENABLE ROW LEVEL SECURITY;
 
 -- Create policies
-CREATE POLICY "Anyone can read songs"
+CREATE POLICY "anyone_can_read_songs"
   ON songs
   FOR SELECT
   TO public
   USING (true);
 
-CREATE POLICY "Anyone can insert songs"
+CREATE POLICY "anyone_can_insert_songs"
   ON songs
   FOR INSERT
   TO public
   WITH CHECK (true);
 
-CREATE POLICY "Anyone can update comments"
-  ON songs
-  FOR UPDATE
-  TO public
-  USING (true)
-  WITH CHECK (true);
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1
+    FROM information_schema.columns
+    WHERE table_name = 'playlists' AND column_name = 'user_id'
+  ) THEN
+    ALTER TABLE playlists ALTER COLUMN user_id DROP NOT NULL;
+  END IF;
+END $$;
+
+INSERT INTO playlists (id, name, description, user_id)
+VALUES
+('sunday_morning', 'Sunday Morning Service', 'Playlist for Sunday morning service', NULL),
+('sunday_evening', 'Sunday Evening Service', 'Playlist for Sunday evening service', NULL);

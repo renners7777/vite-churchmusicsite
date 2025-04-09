@@ -76,17 +76,6 @@ function handleVideoModal(event) {
   }
 }
 
-// Handle search input with debounce
-function handleSearchInput(event) {
-  if (event.target.id !== 'song-search') return;
-
-  // Update the search query in the state
-  state.searchQuery = event.target.value;
-
-  // Debounce the search logic to avoid excessive updates
-  debouncedUpdateSearch(state.searchQuery);
-}
-
 // Prevent navigation on backspace and handle special keys
 function handleSearchKeyDown(event) {
   // Only handle events from the search input
@@ -137,15 +126,6 @@ function initializeHandlers() {
   // Mark as initialized
   state.isInitialized = true;
 }
-
-// Debounced function to update search state
-const debouncedUpdateSearch = debounce((query) => {
-  const trimmedQuery = query.trim();
-  if (state.searchQuery !== trimmedQuery) {
-    state.searchQuery = trimmedQuery;
-    window.dispatchEvent(new Event('content-update'));
-  }
-}, 100);
 
 // Helper function to normalize text for searching
 function normalizeText(text) {
@@ -280,7 +260,7 @@ async function addSongToPlaylist(songId, playlistId) {
   }
 }
 
-// Render search bar
+// Render the search bar
 function renderSearchBar() {
   return `
     <div class="search-container">
@@ -289,22 +269,87 @@ function renderSearchBar() {
         id="song-search"
         class="search-input"
         placeholder="Search by title, author, or lyrics..."
-        value=""
-        oninput="handleSearchInput(event)"
-        onkeydown="handleSearchKeyDown(event)"
         aria-label="Search songs"
         autocomplete="off"
       />
-      ${state.searchQuery ? `
-        <button
-          class="clear-search"
-          aria-label="Clear search"
-          onclick="clearSearch(event)"
-        >
-          ✕
-        </button>
-      ` : ''}
+      <button
+        id="clear-search"
+        class="clear-search hidden"
+        aria-label="Clear search"
+      >
+        ✕
+      </button>
     </div>
+  `;
+}
+
+// Initialize the search bar functionality
+function initializeSearchBar() {
+  const searchInput = document.getElementById('song-search');
+  const clearButton = document.getElementById('clear-search');
+
+  if (!searchInput || !clearButton) return;
+
+  // Debounced function to handle search input
+  const debouncedSearch = debounce((query) => {
+    const normalizedQuery = normalizeText(query);
+    const filteredSongs = state.songs.filter((song) => {
+      return (
+        normalizeText(song.title).includes(normalizedQuery) ||
+        normalizeText(song.author).includes(normalizedQuery) ||
+        normalizeText(song.lyrics || '').includes(normalizedQuery)
+      );
+    });
+
+    // Update the UI with the filtered songs
+    updateSongList(filteredSongs);
+  }, 300);
+
+  // Handle input event
+  searchInput.addEventListener('input', (event) => {
+    const query = event.target.value.trim();
+    if (query) {
+      clearButton.classList.remove('hidden');
+    } else {
+      clearButton.classList.add('hidden');
+    }
+    debouncedSearch(query);
+  });
+
+  // Handle clear button click
+  clearButton.addEventListener('click', () => {
+    searchInput.value = '';
+    clearButton.classList.add('hidden');
+    updateSongList(state.songs); // Reset to the full song list
+  });
+}
+
+// Update the song list in the UI
+function updateSongList(songs) {
+  const songListContainer = document.querySelector('.song-list');
+  if (!songListContainer) return;
+
+  if (songs.length === 0) {
+    songListContainer.innerHTML = `
+      <div class="text-center py-8">
+        No songs found matching your search.
+      </div>
+    `;
+  } else {
+    songListContainer.innerHTML = songs
+      .map((song) => renderSongCard(song))
+      .join('');
+  }
+}
+
+// Helper function to render a single song card
+function renderSongCard(song) {
+  return `
+    <article class="song-card">
+      <h3>${song.title}</h3>
+      <p>By ${song.author || 'Unknown'}</p>
+      ${song.youtube_url ? `<a href="${song.youtube_url}" target="_blank">Watch Video</a>` : ''}
+    </article>
   `;
 }
 
@@ -312,6 +357,10 @@ function renderSearchBar() {
 window.SongsList = async function(currentUser) {
   // Initialize handlers when component is mounted
   initializeHandlers()
+
+  const searchBar = renderSearchBar();
+  document.querySelector('.search-container-wrapper').innerHTML = searchBar;
+  initializeSearchBar();
 
   // Load initial data if not already loaded
   if (!state.isInitialized || state.songs.length === 0) {
@@ -327,16 +376,14 @@ window.SongsList = async function(currentUser) {
     `
   }
 
-  const filteredSongs = getFilteredSongs();
-
-  const searchBar = renderSearchBar();
+  const filteredSongs = state.songs;
 
   // Show appropriate message if no songs found
   if (filteredSongs.length === 0) {
     return `
       <section class="container mx-auto p-4">
         <h2 class="text-3xl font-bold mb-6">Worship Songs</h2>
-        ${searchBar}
+        <div class="search-container-wrapper"></div>
         <div class="text-center py-8">
           ${state.loading ? 
             'Loading songs...' : 
@@ -353,65 +400,9 @@ window.SongsList = async function(currentUser) {
   return `
     <section class="container mx-auto p-4" aria-labelledby="songs-heading">
       <h2 id="songs-heading" class="text-3xl font-bold mb-6">Worship Songs</h2>
-      ${searchBar}
-      <div class="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-        ${filteredSongs.map(song => `
-          <article class="song-card" aria-labelledby="song-title-${song.id}">
-            <div class="flex justify-between items-start mb-4">
-              <h3 id="song-title-${song.id}" class="text-xl font-semibold">${song.title}</h3>
-              <div class="flex space-x-2">
-                ${currentUser && state.playlists.length ? `
-                  <div class="relative">
-                    <button 
-                      data-action="toggle-playlist"
-                      data-song-id="${song.id}"
-                      class="button-icon"
-                      aria-label="Add ${song.title} to playlist"
-                      aria-expanded="false"
-                      aria-controls="playlist-dropdown-${song.id}"
-                      ${state.addingToPlaylist === song.id ? 'disabled' : ''}
-                    >
-                      ${state.addingToPlaylist === song.id ? '⏳' : '➕'}
-                    </button>
-                    <div 
-                      id="playlist-dropdown-${song.id}" 
-                      class="dropdown hidden"
-                      role="menu"
-                      aria-label="Add to playlist options"
-                      tabindex="-1"
-                    >
-                      ${state.playlists.map(playlist => `
-                        <button
-                          data-action="add-to-playlist"
-                          data-song-id="${song.id}"
-                          data-playlist-id="${playlist.id}"
-                          class="dropdown-item"
-                          role="menuitem"
-                          aria-label="Add ${song.title} to ${playlist.name}"
-                          ${state.addingToPlaylist === song.id ? 'disabled' : ''}
-                        >
-                          ${playlist.name}
-                        </button>
-                      `).join('')}
-                    </div>
-                  </div>
-                ` : ''}
-              </div>
-            </div>
-            <p class="text-gray-600 mb-4">By ${song.author || 'Unknown'}</p>
-            ${song.youtube_url ? `
-              <button 
-                data-action="play-video"
-                data-video-id="${getYouTubeVideoId(song.youtube_url)}"
-                class="button inline-flex items-center space-x-2"
-                aria-label="Play ${song.title}"
-              >
-                <span>Play Video</span>
-                <span aria-hidden="true">▶️</span>
-              </button>
-            ` : ''}
-          </article>
-        `).join('')}
+      <div class="search-container-wrapper"></div>
+      <div class="song-list grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+        ${filteredSongs.map(song => renderSongCard(song)).join('')}
       </div>
 
       ${state.activeVideoId ? `
@@ -549,53 +540,6 @@ window.handleAddSong = async function(event, currentUser) {
   window.dispatchEvent(new Event('content-update'))
 }
 
-let cachedQuery = '';
-let cachedResults = [];
-
-function getFilteredSongs() {
-  if (state.searchQuery === cachedQuery) {
-    return cachedResults;
-  }
-  cachedQuery = state.searchQuery;
-  cachedResults = state.songs.filter(song => {
-    const normalizedQuery = normalizeText(state.searchQuery);
-    return normalizeText(song.title).includes(normalizedQuery) ||
-           normalizeText(song.author).includes(normalizedQuery) ||
-           normalizeText(song.lyrics)?.includes(normalizedQuery);
-  });
-  return cachedResults;
-}
-
-let isUpdating = false;
-
-window.handleSearchInput = (event) => {
-  if (isUpdating) return;
-  isUpdating = true;
-
-  window.searchQuery = event.target.value;
-
-  SongsList(window.currentUser, window.searchQuery).then(content => {
-    const songListContainer = document.querySelector('.song-list');
-    if (songListContainer) {
-      songListContainer.innerHTML = content;
-    }
-    isUpdating = false;
-  });
-};
-
-// Expose functions to window for inline event handlers
-window.handleSearchKeyDown = handleSearchKeyDown;
-window.clearSearch = clearSearch;
-
-document.addEventListener('DOMContentLoaded', () => {
-  if (!window.handleSearchKeyDown) {
-    window.handleSearchKeyDown = handleSearchKeyDown;
-    window.handleSearchInput = handleSearchInput;
-    window.clearSearch = clearSearch;
-    console.log('Functions are now attached to window.');
-  }
-});
-
 let isRouting = false;
 
 async function handleRoute() {
@@ -614,7 +558,7 @@ async function handleRoute() {
         content = SignupForm();
         break;
       case '#songs':
-        content = await SongsList(window.currentUser, window.searchQuery);
+        content = await SongsList(window.currentUser);
         break;
       case '#playlists':
         content = await PlaylistsView(window.currentUser);
@@ -623,7 +567,7 @@ async function handleRoute() {
         content = AddSongForm();
         break;
       default:
-        content = await SongsList(window.currentUser, window.searchQuery);
+        content = await SongsList(window.currentUser);
     }
 
     app.innerHTML = `
