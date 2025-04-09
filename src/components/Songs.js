@@ -9,7 +9,8 @@ const state = {
   loading: false,
   addingToPlaylist: null,
   activeVideoId: null, // Track currently playing video
-  isInitialized: false // Track if initial load is done
+  isInitialized: false, // Track if initial load is done
+  errorMessage: '' // Track error messages
 }
 
 // Debounce helper
@@ -44,37 +45,34 @@ function getYouTubeVideoId(url) {
 
 // Handle video modal interactions
 function handleVideoModal(event) {
-  const videoBtn = event.target.closest('[data-action="play-video"]')
-  const closeBtn = event.target.closest('[data-action="close-modal"]')
-  const modal = document.getElementById('video-modal')
+  const videoBtn = event.target.closest('[data-action="play-video"]');
+  const closeBtn = event.target.closest('[data-action="close-modal"]');
+  const modal = document.getElementById('video-modal');
 
   if (videoBtn) {
-    const videoId = videoBtn.dataset.videoId
+    const videoId = videoBtn.dataset.videoId;
     if (!videoId) {
-      alert('Sorry, this video URL appears to be invalid.')
-      return
+      alert('Sorry, this video URL appears to be invalid.');
+      return;
     }
-    state.activeVideoId = videoId
-    window.dispatchEvent(new Event('content-update'))
-    // Focus trap for accessibility
-    setTimeout(() => {
-      const closeButton = document.querySelector('[data-action="close-modal"]')
-      if (closeButton) closeButton.focus()
-    }, 100)
+    if (state.activeVideoId !== videoId) {
+      state.activeVideoId = videoId;
+      window.dispatchEvent(new Event('content-update'));
+    }
   }
 
   if (closeBtn || (modal && event.target === modal)) {
-    state.activeVideoId = null
-    window.dispatchEvent(new Event('content-update'))
-    // Return focus to the play button
-    const playButton = document.querySelector(`[data-video-id="${state.activeVideoId}"]`)
-    if (playButton) playButton.focus()
+    if (state.activeVideoId) {
+      state.activeVideoId = null;
+      const iframe = modal.querySelector('iframe');
+      if (iframe) iframe.remove();
+      window.dispatchEvent(new Event('content-update'));
+    }
   }
 
-  // Handle Escape key
   if (event.key === 'Escape' && state.activeVideoId) {
-    state.activeVideoId = null
-    window.dispatchEvent(new Event('content-update'))
+    state.activeVideoId = null;
+    window.dispatchEvent(new Event('content-update'));
   }
 }
 
@@ -133,6 +131,9 @@ function initializeHandlers() {
     searchInput.addEventListener('keydown', handleSearchKeyDown);
   }
 
+  // Attach click listener to the clear search button
+  document.querySelector('.clear-search').addEventListener('click', clearSearch);
+
   // Mark as initialized
   state.isInitialized = true;
 }
@@ -144,7 +145,7 @@ const debouncedUpdateSearch = debounce((query) => {
     state.searchQuery = trimmedQuery;
     window.dispatchEvent(new Event('content-update'));
   }
-}, 100); // Reduced debounce delay
+}, 100);
 
 // Helper function to normalize text for searching
 function normalizeText(text) {
@@ -258,7 +259,8 @@ async function addSongToPlaylist(songId, playlistId) {
       ])
 
     if (error) {
-      alert('Error adding song to playlist: ' + error.message)
+      state.errorMessage = 'Error adding song to playlist: ' + error.message;
+      window.dispatchEvent(new Event('content-update'));
       return
     }
 
@@ -325,19 +327,7 @@ window.SongsList = async function(currentUser) {
     `
   }
 
-  const normalizedQuery = normalizeText(state.searchQuery)
-  
-  const filteredSongs = normalizedQuery
-    ? state.songs.filter(song => {
-        const normalizedTitle = normalizeText(song.title)
-        const normalizedAuthor = normalizeText(song.author)
-        const normalizedLyrics = normalizeText(song.lyrics)
-        
-        return normalizedTitle.includes(normalizedQuery) ||
-               normalizedAuthor.includes(normalizedQuery) ||
-               normalizedLyrics?.includes(normalizedQuery)
-      })
-    : state.songs
+  const filteredSongs = getFilteredSongs();
 
   const searchBar = renderSearchBar();
 
@@ -388,6 +378,7 @@ window.SongsList = async function(currentUser) {
                       class="dropdown hidden"
                       role="menu"
                       aria-label="Add to playlist options"
+                      tabindex="-1"
                     >
                       ${state.playlists.map(playlist => `
                         <button
@@ -558,7 +549,29 @@ window.handleAddSong = async function(event, currentUser) {
   window.dispatchEvent(new Event('content-update'))
 }
 
+let cachedQuery = '';
+let cachedResults = [];
+
+function getFilteredSongs() {
+  if (state.searchQuery === cachedQuery) {
+    return cachedResults;
+  }
+  cachedQuery = state.searchQuery;
+  cachedResults = state.songs.filter(song => {
+    const normalizedQuery = normalizeText(state.searchQuery);
+    return normalizeText(song.title).includes(normalizedQuery) ||
+           normalizeText(song.author).includes(normalizedQuery) ||
+           normalizeText(song.lyrics)?.includes(normalizedQuery);
+  });
+  return cachedResults;
+}
+
+let isUpdating = false;
+
 window.handleSearchInput = (event) => {
+  if (isUpdating) return;
+  isUpdating = true;
+
   window.searchQuery = event.target.value;
 
   SongsList(window.currentUser, window.searchQuery).then(content => {
@@ -566,6 +579,7 @@ window.handleSearchInput = (event) => {
     if (songListContainer) {
       songListContainer.innerHTML = content;
     }
+    isUpdating = false;
   });
 };
 
@@ -574,15 +588,56 @@ window.handleSearchKeyDown = handleSearchKeyDown;
 window.clearSearch = clearSearch;
 
 document.addEventListener('DOMContentLoaded', () => {
-  console.log('handleSearchKeyDown before attaching:', handleSearchKeyDown);
-  window.handleSearchKeyDown = handleSearchKeyDown;
-  console.log('handleSearchKeyDown is attached to window:', window.handleSearchKeyDown);
-
-  window.handleSearchInput = handleSearchInput;
-  window.handleSearchKeyDown = handleSearchKeyDown;
-  window.clearSearch = clearSearch;
-
-  console.log('Functions are now attached to window.');
+  if (!window.handleSearchKeyDown) {
+    window.handleSearchKeyDown = handleSearchKeyDown;
+    window.handleSearchInput = handleSearchInput;
+    window.clearSearch = clearSearch;
+    console.log('Functions are now attached to window.');
+  }
 });
+
+let isRouting = false;
+
+async function handleRoute() {
+  if (isRouting) return;
+  isRouting = true;
+
+  try {
+    const hash = window.location.hash || '#songs';
+    let content = '';
+
+    switch (hash) {
+      case '#login':
+        content = LoginForm();
+        break;
+      case '#signup':
+        content = SignupForm();
+        break;
+      case '#songs':
+        content = await SongsList(window.currentUser, window.searchQuery);
+        break;
+      case '#playlists':
+        content = await PlaylistsView(window.currentUser);
+        break;
+      case '#add-song':
+        content = AddSongForm();
+        break;
+      default:
+        content = await SongsList(window.currentUser, window.searchQuery);
+    }
+
+    app.innerHTML = `
+      <div class="min-h-screen flex flex-col">
+        ${Header(window.currentUser)}
+        <main class="container mx-auto px-4 py-8 flex-grow">
+          ${content}
+        </main>
+        ${Footer()}
+      </div>
+    `;
+  } finally {
+    isRouting = false;
+  }
+}
 
 
