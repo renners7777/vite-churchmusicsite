@@ -102,3 +102,9 @@ export function Header(currentUser) {
     </header>
   `
 }
+
+document.getElementById('app').innerHTML = `
+  ${Header(window.currentUser)}
+  <main>...</main>
+  ${Footer()}
+`;
