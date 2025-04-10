@@ -1,4 +1,6 @@
 export function Header(currentUser) {
+  console.log('Current User:', currentUser);
+
   const authLinks = currentUser 
     ? `<button 
          onclick="handleSignOut()" 
