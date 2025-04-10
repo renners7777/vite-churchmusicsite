@@ -1,4 +1,4 @@
-import { loadSundayPlaylists } from '../services/SundayPlaylistsService';
+import { loadSundayPlaylists } from '.src/components/SundayServicesPage.js'; 
 
 export function SundayServicesPage() {
   return `
