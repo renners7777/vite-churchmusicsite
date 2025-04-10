@@ -58,6 +58,16 @@ export function Header(currentUser) {
           Add Song
         </a>
       </li>
+      <li>
+        <a 
+          href="#sunday-services" 
+          class="nav-link"
+          aria-label="View Sunday Services playlists"
+          aria-current="${window.location.hash === '#sunday-services' ? 'page' : 'false'}"
+        >
+          Sunday Services
+        </a>
+      </li>
     `
     : ''
 
