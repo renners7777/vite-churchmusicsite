@@ -69,7 +69,7 @@ export function Header(currentUser) {
         </a>
       </li>
     `
-    : ''
+    : '';
 
   return `
     <header class="header" role="banner">
