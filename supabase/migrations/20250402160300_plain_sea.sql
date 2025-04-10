@@ -85,6 +85,18 @@ CREATE TABLE playlist_songs (
     updated_at TIMESTAMPTZ DEFAULT now()
 );
 
+ALTER TABLE playlist_songs
+ADD CONSTRAINT fk_playlist
+FOREIGN KEY (playlist_id)
+REFERENCES playlists(id)
+ON DELETE CASCADE;
+
+ALTER TABLE playlist_songs
+ADD CONSTRAINT fk_song
+FOREIGN KEY (song_id)
+REFERENCES songs(id)
+ON DELETE CASCADE;
+
 -- Create sunday_playlists table
 CREATE TABLE sunday_playlists (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
