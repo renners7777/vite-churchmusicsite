@@ -2,9 +2,8 @@ import { marked } from 'marked'
 import supabase from '../services/supabase.js'
 
 // --- Configuration ---
-// TODO: Replace with actual IDs or names of your Sunday playlists
-const SUNDAY_AM_PLAYLIST_ID = 'your-sunday-am-playlist-id-or-name';
-const SUNDAY_PM_PLAYLIST_ID = 'your-sunday-pm-playlist-id-or-name';
+const SUNDAY_AM_PLAYLIST_NAME = 'Sunday Morning Service';
+const SUNDAY_PM_PLAYLIST_NAME = 'Sunday Evening Service';
 // --- End Configuration ---
 
 // Global state for the Songs page
