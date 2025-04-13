@@ -23,6 +23,8 @@ export function SundayServicesPage() {
 
 export async function renderSundayPlaylists() {
   const { morningSongs, eveningSongs } = await loadSundayPlaylists();
+  console.log('Morning Songs Data:', morningSongs); // Add this line
+  console.log('Evening Songs Data:', eveningSongs); // Add this line
 
   const morningList = document.getElementById('morning-service-playlist');
   const eveningList = document.getElementById('evening-service-playlist');
