@@ -31,13 +31,13 @@ export async function renderSundayPlaylists() {
 
   if (morningList) {
     morningList.innerHTML = morningSongs
-      .map(song => `<li>${song.songs.title} by ${song.songs.author || 'Unknown'}</li>`)
+      .map(song => `<li>${songs.title} by ${songs.author || 'Unknown'}</li>`)
       .join('');
   }
 
   if (eveningList) {
     eveningList.innerHTML = eveningSongs
-      .map(song => `<li>${song.songs.title} by ${song.songs.author || 'Unknown'}</li>`)
+      .map(song => `<li>${songs.title} by ${songs.author || 'Unknown'}</li>`)
       .join('');
   }
 }
