@@ -9,8 +9,10 @@ const SUNDAY_PM_PLAYLIST_NAME = 'Sunday Evening Service';
 // Global state for the Songs page
 const state = {
   allSongs: [], // All songs from DB
-  sundayAmPlaylist: null, // { id, name, songs: [] }
-  sundayPmPlaylist: null, // { id, name, songs: [] }
+  sundayAmPlaylist: null, // { id, name, songs: [] } - Will hold actual data
+  sundayPmPlaylist: null, // { id, name, songs: [] } - Will hold actual data
+  sundayAmPlaylistId: null, // Store the fetched ID
+  sundayPmPlaylistId: null, // Store the fetched ID
   searchQuery: '',
   filteredSongs: [], // Songs matching search query
   loading: false,
@@ -71,18 +73,75 @@ async function loadPageData(currentUser) {
   }
 
   try {
-    const requests = [
-      supabase.from('songs').select('*').order('title')
-    ];
+    // 1. Fetch all songs
+    const songsReq = supabase.from('songs').select('*').order('title');
 
-    const [songsResult] = await Promise.all([requests[0]]);
+    // 2. Fetch Sunday Playlist IDs by name
+    const amPlaylistReq = supabase.from('sunday_playlists')
+                                  .select('id')
+                                  .eq('name', SUNDAY_AM_PLAYLIST_NAME)
+                                  .maybeSingle(); // Use maybeSingle in case it doesn't exist yet
+
+    const pmPlaylistReq = supabase.from('sunday_playlists')
+                                  .select('id')
+                                  .eq('name', SUNDAY_PM_PLAYLIST_NAME)
+                                  .maybeSingle(); // Use maybeSingle
+
+    const [songsResult, amPlaylistResult, pmPlaylistResult] = await Promise.all([
+        songsReq, amPlaylistReq, pmPlaylistReq
+    ]);
 
     if (songsResult.error) throw songsResult.error;
+    if (amPlaylistResult.error) throw amPlaylistResult.error;
+    if (pmPlaylistResult.error) throw pmPlaylistResult.error;
 
     state.allSongs = songsResult.data || [];
     state.filteredSongs = state.allSongs;
-    state.sundayAmPlaylist = { id: 'am-placeholder', name: 'Sunday AM Service', songs: [] };
-    state.sundayPmPlaylist = { id: 'pm-placeholder', name: 'Sunday PM Service', songs: [] };
+
+    // Store the fetched IDs
+    state.sundayAmPlaylistId = amPlaylistResult.data?.id || null;
+    state.sundayPmPlaylistId = pmPlaylistResult.data?.id || null;
+
+    // 3. Fetch songs for each Sunday playlist IF the playlist ID was found
+    const sundaySongsReqs = [];
+    if (state.sundayAmPlaylistId) {
+        sundaySongsReqs.push(
+            supabase.from('sunday_playlist_songs')
+                    .select('*, songs(*)') // Fetch song details via relationship
+                    .eq('sunday_playlist_id', state.sundayAmPlaylistId)
+                    .order('position', { ascending: true }) // Assuming you have a position column
+        );
+    } else {
+        sundaySongsReqs.push(Promise.resolve({ data: [], error: null })); // Placeholder if no AM playlist
+    }
+
+    if (state.sundayPmPlaylistId) {
+        sundaySongsReqs.push(
+            supabase.from('sunday_playlist_songs')
+                    .select('*, songs(*)') // Fetch song details via relationship
+                    .eq('sunday_playlist_id', state.sundayPmPlaylistId)
+                    .order('position', { ascending: true }) // Assuming you have a position column
+        );
+    } else {
+        sundaySongsReqs.push(Promise.resolve({ data: [], error: null })); // Placeholder if no PM playlist
+    }
+
+    const [amSongsResult, pmSongsResult] = await Promise.all(sundaySongsReqs);
+
+    if (amSongsResult.error) throw amSongsResult.error;
+    if (pmSongsResult.error) throw pmSongsResult.error;
+
+    // Update state with actual playlist data
+    state.sundayAmPlaylist = {
+        id: state.sundayAmPlaylistId,
+        name: SUNDAY_AM_PLAYLIST_NAME,
+        songs: amSongsResult.data || [] // songs here are the join records + nested song details
+    };
+    state.sundayPmPlaylist = {
+        id: state.sundayPmPlaylistId,
+        name: SUNDAY_PM_PLAYLIST_NAME,
+        songs: pmSongsResult.data || [] // songs here are the join records + nested song details
+    };
 
   } catch (error) {
     console.error('Error loading songs page data:', error);
@@ -91,6 +150,8 @@ async function loadPageData(currentUser) {
     state.filteredSongs = [];
     state.sundayAmPlaylist = null;
     state.sundayPmPlaylist = null;
+    state.sundayAmPlaylistId = null;
+    state.sundayPmPlaylistId = null;
   } finally {
     state.loading = false;
     state.isInitialized = true;
@@ -104,10 +165,40 @@ async function addSongToSundayPlaylist(songId, playlistId) {
     alert('Please login to manage Sunday playlists.');
     return;
   }
-  if (!playlistId || !songId) return;
+  if (!playlistId || !songId) {
+      console.error('Missing songId or playlistId for addSongToSundayPlaylist');
+      alert('Could not add song: Missing information.');
+      return;
+  }
 
-  console.log(`TODO: Add song ${songId} to playlist ${playlistId}`);
-  alert(`Adding song to ${playlistId === SUNDAY_AM_PLAYLIST_ID ? 'Sunday AM' : 'Sunday PM'}... (Implementation needed)`);
+  // Check if song is already in the target playlist
+  const targetPlaylist = playlistId === state.sundayAmPlaylistId ? state.sundayAmPlaylist : state.sundayPmPlaylist;
+  if (targetPlaylist?.songs?.some(ps => ps.song_id === songId)) {
+      alert('This song is already in the selected Sunday playlist.');
+      return;
+  }
+
+  try {
+    // Assuming 'position' column exists for ordering, find the next position
+    const nextPosition = (targetPlaylist?.songs?.length || 0) + 1;
+
+    const { error } = await supabase
+      .from('sunday_playlist_songs')
+      .insert({
+        sunday_playlist_id: playlistId,
+        song_id: songId,
+        position: nextPosition // Optional: Add position if you have it
+      });
+
+    if (error) throw error;
+
+    // Reload data to reflect the change
+    await loadPageData(window.currentUser);
+
+  } catch (error) {
+    console.error(`Error adding song ${songId} to playlist ${playlistId}:`, error);
+    alert('Error adding song to Sunday playlist: ' + error.message);
+  }
 }
 
 async function removeSongFromSundayPlaylist(songId, playlistId) {
@@ -115,13 +206,30 @@ async function removeSongFromSundayPlaylist(songId, playlistId) {
     alert('Please login to manage Sunday playlists.');
     return;
   }
-   if (!playlistId || !songId) return;
+   if (!playlistId || !songId) {
+       console.error('Missing songId or playlistId for removeSongFromSundayPlaylist');
+       alert('Could not remove song: Missing information.');
+       return;
+   }
    if (!confirm('Are you sure you want to remove this song from the Sunday playlist?')) {
        return;
    }
 
-  console.log(`TODO: Remove song ${songId} from playlist ${playlistId}`);
-  alert(`Removing song from ${playlistId === SUNDAY_AM_PLAYLIST_ID ? 'Sunday AM' : 'Sunday PM'}... (Implementation needed)`);
+  try {
+    const { error } = await supabase
+      .from('sunday_playlist_songs')
+      .delete()
+      .match({ sunday_playlist_id: playlistId, song_id: songId }); // Match both IDs
+
+    if (error) throw error;
+
+    // Reload data to reflect the change
+    await loadPageData(window.currentUser);
+
+  } catch (error) {
+    console.error(`Error removing song ${songId} from playlist ${playlistId}:`, error);
+    alert('Error removing song from Sunday playlist: ' + error.message);
+  }
 }
 
 // --- Add Song Form ---
@@ -229,7 +337,8 @@ function performSearch() {
         state.filteredSongs = state.allSongs.filter((song) => {
             return (
                 normalizeText(song.title).includes(normalizedQuery) ||
-                normalizeText(song.author).includes(normalizedQuery)
+                normalizeText(song.author).includes(normalizedQuery) ||
+                normalizeText(song.lyrics || '').includes(normalizedQuery) // Added lyrics search
             );
         });
     }
@@ -407,16 +516,26 @@ export function SongsPage(currentUser) {
 
     resolve(renderContent());
 
+    // --- Rendering Efficiency Note ---
+    // The current approach uses 'innerHTML' to replace the entire content
+    // on every 'songs-page-update'. This is simple but inefficient for
+    // larger applications. It causes the whole section to re-render,
+    // potentially losing input focus or other transient UI states.
+    // A more advanced approach would involve targeted DOM manipulation
+    // (updating only the elements that changed) or using a UI library/framework.
+    // --- End Rendering Efficiency Note ---
     window.removeEventListener('songs-page-update', window._songsPageUpdateHandler);
     window._songsPageUpdateHandler = () => {
-        const songsContainer = document.querySelector('main');
+        const songsContainer = document.querySelector('main'); // Assuming 'main' is the container
         if (songsContainer) {
             songsContainer.innerHTML = renderContent();
+            // Re-initialize handlers because the previous elements were destroyed
             initializeSongsPageHandlers(currentUser);
         }
     };
     window.addEventListener('songs-page-update', window._songsPageUpdateHandler);
 
+    // Initial setup of handlers after the first render
     requestAnimationFrame(() => {
         initializeSongsPageHandlers(currentUser);
     });
@@ -455,9 +574,9 @@ function handlePageClick(event, currentUser) {
 
   if (currentUser) {
       if (action === 'add-to-sunday-am' && songId) {
-          addSongToSundayPlaylist(songId, SUNDAY_AM_PLAYLIST_ID);
+          addSongToSundayPlaylist(songId, state.sundayAmPlaylistId);
       } else if (action === 'add-to-sunday-pm' && songId) {
-          addSongToSundayPlaylist(songId, SUNDAY_PM_PLAYLIST_ID);
+          addSongToSundayPlaylist(songId, state.sundayPmPlaylistId);
       } else if (action === 'remove-from-sunday' && songId && playlistId) {
           removeSongFromSundayPlaylist(songId, playlistId);
       }
@@ -477,6 +596,12 @@ function handlePageKeyDown(event) {
 
 // --- Initialization ---
 function initializeSongsPageHandlers(currentUser) {
+    // --- Initialization Logic Note ---
+    // Event listeners are removed and re-added here because the entire
+    // container's innerHTML is replaced on each update, destroying
+    // the old elements and their attached listeners. This is necessary
+    // with the current rendering strategy but highlights its inefficiency.
+    // --- End Initialization Logic Note ---
     document.removeEventListener('click', window._songsPageClickHandler);
     document.removeEventListener('keydown', window._songsPageKeyDownHandler);
     const addForm = document.getElementById('add-song-form');
@@ -509,6 +634,6 @@ function initializeSongsPageHandlers(currentUser) {
      }
 }
 
-window.SongsPage = SongsPage;
+window.SongsPage = SongsPage; // Ensure SongsPage is globally accessible if needed by router
 
 
