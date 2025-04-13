@@ -1,7 +1,7 @@
 import { LoginForm, SignupForm } from '../components/Auth.js'
 import { SongsList, AddSongForm } from '../components/Songs.js'
 import { PlaylistsView } from '../components/Playlists.js'
-import { SundayServicesPage, renderSundayPlaylists } from './pages/SundayServicesPage';
+import { SundayServicesPage, renderSundayPlaylists } from './components/SundayServicesPage.js';
 
 async function handleRoute() {
   const hash = window.location.hash || '#home';
@@ -37,7 +37,7 @@ async function handleRoute() {
     </div>
   `;
 
-  // Load additional data for Sunday Services
+  // Call renderSundayPlaylists AFTER the content is in the DOM
   if (hash === '#sunday-services') {
     await renderSundayPlaylists();
   }

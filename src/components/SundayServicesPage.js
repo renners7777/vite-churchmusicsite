@@ -1,4 +1,4 @@
-import { loadSundayPlaylists } from '.src/components/SundayServicesPage.js'; 
+import { loadSundayPlaylists } from '.src/components/SundayServicesPage.js'; // Corrected path
 
 export function SundayServicesPage() {
   return `
