@@ -101,6 +101,8 @@ async function loadPageData(currentUser) {
     // Store the fetched IDs
     state.sundayAmPlaylistId = amPlaylistResult.data?.id || null;
     state.sundayPmPlaylistId = pmPlaylistResult.data?.id || null;
+    console.log('LOADED - State AM ID:', state.sundayAmPlaylistId); // <-- ADD THIS
+    console.log('LOADED - State PM ID:', state.sundayPmPlaylistId); // <-- ADD THIS
 
     // 3. Fetch songs for each Sunday playlist IF the playlist ID was found
     const sundaySongsReqs = [];
@@ -574,11 +576,13 @@ function handlePageClick(event, currentUser) {
 
   if (currentUser) {
       if (action === 'add-to-sunday-am' && songId) {
-          addSongToSundayPlaylist(songId, state.sundayAmPlaylistId);
+          console.log('CLICK AM - State AM ID:', state.sundayAmPlaylistId); // <-- ADD THIS
+          if (!state.sundayAmPlaylistId) { /* ... error handling ... */ }
+          else { addSongToSundayPlaylist(songId, state.sundayAmPlaylistId); }
       } else if (action === 'add-to-sunday-pm' && songId) {
-          addSongToSundayPlaylist(songId, state.sundayPmPlaylistId);
-      } else if (action === 'remove-from-sunday' && songId && playlistId) {
-          removeSongFromSundayPlaylist(songId, playlistId);
+          console.log('CLICK PM - State PM ID:', state.sundayPmPlaylistId); // <-- ADD THIS
+          if (!state.sundayPmPlaylistId) { /* ... error handling ... */ }
+          else { addSongToSundayPlaylist(songId, state.sundayPmPlaylistId); }
       }
   }
 }
