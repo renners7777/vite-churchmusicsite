@@ -124,14 +124,65 @@ async function loadPageData(currentUser) {
 
     // If we get here, songsResult should be okay
     state.allSongs = songsResult.data || [];
-    console.log('Fetched allSongs:', JSON.stringify(state.allSongs)); // <-- Your original log
+    console.log('Fetched allSongs:', JSON.stringify(state.allSongs));
 
-    // --- DETAILED LOGGING ---
-    // console.log('Raw AM Playlist Result:', JSON.stringify(amPlaylistResult)); // Keep or remove as needed
-    // console.log('Raw PM Playlist Result:', JSON.stringify(pmPlaylistResult)); // Keep or remove as needed
-    // --- END DETAILED LOGGING ---
+    // --- !!! ADD THESE LINES TO STORE PLAYLIST IDs !!! ---
+    state.sundayAmPlaylistId = amPlaylistResult.data?.id || null;
+    state.sundayPmPlaylistId = pmPlaylistResult.data?.id || null;
+    console.log('LOADED - State AM ID set to:', state.sundayAmPlaylistId); // Log assigned value
+    console.log('LOADED - State PM ID set to:', state.sundayPmPlaylistId); // Log assigned value
+    // --- END OF ADDED LINES ---
 
-    // ... rest of the try block ...
+    // --- Fetch songs for each playlist ---
+    let amSongsResult = { data: [], error: null };
+    let pmSongsResult = { data: [], error: null };
+
+    if (state.sundayAmPlaylistId) {
+        console.log('Fetching songs for AM Playlist ID:', state.sundayAmPlaylistId);
+        amSongsResult = await supabase.from('sunday_playlist_songs')
+                                      .select('*, songs(*)') // Fetch join data and related song
+                                      .eq('sunday_playlist_id', state.sundayAmPlaylistId)
+                                      .order('position', { ascending: true });
+        if (amSongsResult.error) {
+             console.error("Error fetching AM Playlist songs:", amSongsResult.error);
+             // Decide how to handle this - maybe throw, maybe just log
+        }
+         console.log('Fetched AM Playlist Songs Result:', JSON.stringify(amSongsResult));
+    } else {
+        console.warn("Skipping fetch for AM playlist songs, ID is null.");
+    }
+
+    if (state.sundayPmPlaylistId) {
+        console.log('Fetching songs for PM Playlist ID:', state.sundayPmPlaylistId);
+        pmSongsResult = await supabase.from('sunday_playlist_songs')
+                                      .select('*, songs(*)') // Fetch join data and related song
+                                      .eq('sunday_playlist_id', state.sundayPmPlaylistId)
+                                      .order('position', { ascending: true });
+        if (pmSongsResult.error) {
+             console.error("Error fetching PM Playlist songs:", pmSongsResult.error);
+             // Decide how to handle this
+        }
+         console.log('Fetched PM Playlist Songs Result:', JSON.stringify(pmSongsResult));
+    } else {
+         console.warn("Skipping fetch for PM playlist songs, ID is null.");
+    }
+
+    // Update state with actual playlist data (including fetched songs)
+    state.sundayAmPlaylist = {
+        id: state.sundayAmPlaylistId,
+        name: SUNDAY_AM_PLAYLIST_NAME,
+        songs: amSongsResult.data || [] // songs here are the join records + nested song details
+    };
+    state.sundayPmPlaylist = {
+        id: state.sundayPmPlaylistId,
+        name: SUNDAY_PM_PLAYLIST_NAME,
+        songs: pmSongsResult.data || [] // songs here are the join records + nested song details
+    };
+
+    // Update filtered songs initially
+    state.filteredSongs = state.allSongs;
+
+    console.log('loadPageData: State after all data fetch:', JSON.stringify(state, null, 2)); // Log final state
 
   } catch (error) {
     console.error('Error loading songs page data:', error); // This should catch errors thrown above
