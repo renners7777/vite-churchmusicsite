@@ -248,19 +248,28 @@ async function removeSongFromSundayPlaylist(songId, playlistId) {
        alert('Could not remove song: Missing information.');
        return;
    }
+
+   // --- ADD LOGS HERE ---
+   console.log(`Attempting to remove songId: ${songId} from playlistId: ${playlistId}`);
+   // --- END LOGS ---
+
    if (!confirm('Are you sure you want to remove this song from the Sunday playlist?')) {
        return;
    }
 
   try {
-    const { error } = await supabase
+    console.log(`Executing Supabase delete for songId: ${songId}, playlistId: ${playlistId}`); // Log before call
+    const { error, count } = await supabase // Capture count
       .from('sunday_playlist_songs')
       .delete()
       .match({ sunday_playlist_id: playlistId, song_id: songId }); // Match both IDs
 
+    console.log(`Supabase delete result - Error: ${JSON.stringify(error)}, Count: ${count}`); // Log result
+
     if (error) throw error;
 
     // Reload data to reflect the change
+    console.log('Delete successful, reloading page data...'); // Log before reload
     await loadPageData(window.currentUser);
 
   } catch (error) {
