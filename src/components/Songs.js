@@ -207,7 +207,7 @@ async function addSongToSundayPlaylist(songId, playlistId) {
     const { error } = await supabase
       .from('sunday_playlist_songs')
       .insert({
-        sunday_playlist_id: playlistId,
+        playlist_id: playlistId,
         song_id: songId,
         position: nextPosition // Optional: Add position if you have it
       });

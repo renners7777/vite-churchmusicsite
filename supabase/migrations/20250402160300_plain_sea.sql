@@ -167,7 +167,7 @@ BEGIN
         INSERT INTO sunday_playlists (song_id, service_type)
         VALUES (song_id, service_type);
     -- Add to playlists if playlist_id is provided
-    ELSIF playlist_id IS NOT NULL THEN
+    ELSE IF playlist_id IS NOT NULL THEN
         INSERT INTO playlist_songs (playlist_id, song_id)
         VALUES (playlist_id, song_id);
     ELSE
