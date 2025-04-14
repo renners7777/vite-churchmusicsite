@@ -65,10 +65,17 @@ function renderLoadingPlaceholders(count = 6) {
 
 // --- Data Loading ---
 async function loadPageData(currentUser) {
-  if (state.loading) return;
+  console.log('loadPageData: START'); // <-- ADD LOG 1
+
+  if (state.loading) {
+    console.log('loadPageData: Already loading, returning early.'); // <-- ADD LOG
+    return;
+  }
   state.loading = true;
   state.errorMessage = '';
   if (!state.isInitialized) {
+      // This dispatch might trigger rendering before data is ready,
+      // consider if it's needed here or only in finally block.
       window.dispatchEvent(new CustomEvent('songs-page-update'));
   }
 
@@ -77,110 +84,63 @@ async function loadPageData(currentUser) {
     const songsReq = supabase.from('songs').select('*').order('title');
 
     // 2. Fetch Sunday Playlist IDs by name
-    console.log('Fetching AM Playlist ID for name:', SUNDAY_AM_PLAYLIST_NAME); // Log name
+    console.log('Fetching AM Playlist ID for name:', SUNDAY_AM_PLAYLIST_NAME);
     const amPlaylistReq = supabase.from('sunday_playlists')
-                                  .select('id, name') // Select name too for verification
+                                  .select('id, name')
                                   .eq('name', SUNDAY_AM_PLAYLIST_NAME)
                                   .maybeSingle();
 
-    console.log('Fetching PM Playlist ID for name:', SUNDAY_PM_PLAYLIST_NAME); // Log name
+    console.log('Fetching PM Playlist ID for name:', SUNDAY_PM_PLAYLIST_NAME);
     const pmPlaylistReq = supabase.from('sunday_playlists')
-                                  .select('id, name') // Select name too for verification
+                                  .select('id, name')
                                   .eq('name', SUNDAY_PM_PLAYLIST_NAME)
                                   .maybeSingle();
+
+    console.log('loadPageData: BEFORE Promise.all for songs/playlist IDs'); // <-- ADD LOG 2
 
     const [songsResult, amPlaylistResult, pmPlaylistResult] = await Promise.all([
         songsReq, amPlaylistReq, pmPlaylistReq
     ]);
 
-    // ...
-    if (songsResult.error) throw songsResult.error;
+    console.log('loadPageData: AFTER Promise.all for songs/playlist IDs'); // <-- ADD LOG
+    console.log('loadPageData: songsResult:', JSON.stringify(songsResult)); // <-- ADD LOG 3a
+    console.log('loadPageData: amPlaylistResult:', JSON.stringify(amPlaylistResult)); // <-- ADD LOG 3b
+    console.log('loadPageData: pmPlaylistResult:', JSON.stringify(pmPlaylistResult)); // <-- ADD LOG 3c
+
+
+    // Check for errors immediately after Promise.all resolves
+    if (songsResult.error) {
+        console.error('loadPageData: Error in songsResult:', songsResult.error); // <-- ADD LOG
+        throw songsResult.error; // Re-throw to be caught by the main catch block
+    }
+     if (amPlaylistResult.error) {
+        console.error('loadPageData: Error in amPlaylistResult:', amPlaylistResult.error); // <-- ADD LOG
+        // Potentially throw or handle differently if needed
+    }
+     if (pmPlaylistResult.error) {
+        console.error('loadPageData: Error in pmPlaylistResult:', pmPlaylistResult.error); // <-- ADD LOG
+        // Potentially throw or handle differently if needed
+    }
+
+    // If we get here, songsResult should be okay
     state.allSongs = songsResult.data || [];
-    console.log('Fetched allSongs:', JSON.stringify(state.allSongs)); // <-- ADD THIS LOG
-    // ... rest of the code assigning playlist IDs etc. ...
+    console.log('Fetched allSongs:', JSON.stringify(state.allSongs)); // <-- Your original log
 
     // --- DETAILED LOGGING ---
-    console.log('Raw AM Playlist Result:', JSON.stringify(amPlaylistResult)); // Log raw result
-    console.log('Raw PM Playlist Result:', JSON.stringify(pmPlaylistResult)); // Log raw result
+    // console.log('Raw AM Playlist Result:', JSON.stringify(amPlaylistResult)); // Keep or remove as needed
+    // console.log('Raw PM Playlist Result:', JSON.stringify(pmPlaylistResult)); // Keep or remove as needed
     // --- END DETAILED LOGGING ---
 
-    // Add specific checks for playlist results
-    if (amPlaylistResult.error) {
-        console.error("Error fetching AM Playlist ID:", amPlaylistResult.error);
-        // Decide how to handle this - maybe set state.errorMessage
-    }
-    if (pmPlaylistResult.error) {
-        console.error("Error fetching PM Playlist ID:", pmPlaylistResult.error);
-         // Decide how to handle this - maybe set state.errorMessage
-    }
-    if (!amPlaylistResult.data) {
-         console.warn("AM Playlist data is null/empty for name:", SUNDAY_AM_PLAYLIST_NAME);
-    }
-     if (!pmPlaylistResult.data) {
-         console.warn("PM Playlist data is null/empty for name:", SUNDAY_PM_PLAYLIST_NAME);
-    }
-
-    // Assign to state
-    state.sundayAmPlaylistId = amPlaylistResult.data?.id || null;
-    state.sundayPmPlaylistId = pmPlaylistResult.data?.id || null;
-
-    console.log('LOADED - State AM ID set to:', state.sundayAmPlaylistId); // Log assigned value
-    console.log('LOADED - State PM ID set to:', state.sundayPmPlaylistId); // Log assigned value
-    console.log('LOADED - State object after ID assignment:', JSON.stringify(state)); // Log state
-
-    // 3. Fetch songs for each Sunday playlist IF the playlist ID was found
-    const sundaySongsReqs = [];
-    if (state.sundayAmPlaylistId) {
-        sundaySongsReqs.push(
-            supabase.from('sunday_playlist_songs')
-                    .select('*, songs(*)') // Fetch song details via relationship
-                    .eq('sunday_playlist_id', state.sundayAmPlaylistId)
-                    .order('position', { ascending: true }) // Assuming you have a position column
-        );
-    } else {
-        sundaySongsReqs.push(Promise.resolve({ data: [], error: null })); // Placeholder if no AM playlist
-    }
-
-    if (state.sundayPmPlaylistId) {
-        sundaySongsReqs.push(
-            supabase.from('sunday_playlist_songs')
-                    .select('*, songs(*)') // Fetch song details via relationship
-                    .eq('sunday_playlist_id', state.sundayPmPlaylistId)
-                    .order('position', { ascending: true }) // Assuming you have a position column
-        );
-    } else {
-        sundaySongsReqs.push(Promise.resolve({ data: [], error: null })); // Placeholder if no PM playlist
-    }
-
-    const [amSongsResult, pmSongsResult] = await Promise.all(sundaySongsReqs);
-
-    if (amSongsResult.error) throw amSongsResult.error;
-    if (pmSongsResult.error) throw pmSongsResult.error;
-
-    // Update state with actual playlist data
-    state.sundayAmPlaylist = {
-        id: state.sundayAmPlaylistId,
-        name: SUNDAY_AM_PLAYLIST_NAME,
-        songs: amSongsResult.data || [] // songs here are the join records + nested song details
-    };
-    state.sundayPmPlaylist = {
-        id: state.sundayPmPlaylistId,
-        name: SUNDAY_PM_PLAYLIST_NAME,
-        songs: pmSongsResult.data || [] // songs here are the join records + nested song details
-    };
+    // ... rest of the try block ...
 
   } catch (error) {
-    console.error('Error loading songs page data:', error);
+    console.error('Error loading songs page data:', error); // This should catch errors thrown above
     state.errorMessage = 'Failed to load song data. Please try again.';
-    state.allSongs = [];
-    state.filteredSongs = [];
-    state.sundayAmPlaylist = null;
-    state.sundayPmPlaylist = null;
-    state.sundayAmPlaylistId = null;
-    state.sundayPmPlaylistId = null;
+    // ... reset state ...
   } finally {
     state.loading = false;
     state.isInitialized = true;
+    console.log('loadPageData: FINALLY block, dispatching update'); // <-- ADD LOG
     window.dispatchEvent(new CustomEvent('songs-page-update'));
   }
 }
