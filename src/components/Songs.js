@@ -77,32 +77,52 @@ async function loadPageData(currentUser) {
     const songsReq = supabase.from('songs').select('*').order('title');
 
     // 2. Fetch Sunday Playlist IDs by name
+    console.log('Fetching AM Playlist ID for name:', SUNDAY_AM_PLAYLIST_NAME); // Log name
     const amPlaylistReq = supabase.from('sunday_playlists')
-                                  .select('id')
+                                  .select('id, name') // Select name too for verification
                                   .eq('name', SUNDAY_AM_PLAYLIST_NAME)
-                                  .maybeSingle(); // Use maybeSingle in case it doesn't exist yet
+                                  .maybeSingle();
 
+    console.log('Fetching PM Playlist ID for name:', SUNDAY_PM_PLAYLIST_NAME); // Log name
     const pmPlaylistReq = supabase.from('sunday_playlists')
-                                  .select('id')
+                                  .select('id, name') // Select name too for verification
                                   .eq('name', SUNDAY_PM_PLAYLIST_NAME)
-                                  .maybeSingle(); // Use maybeSingle
+                                  .maybeSingle();
 
     const [songsResult, amPlaylistResult, pmPlaylistResult] = await Promise.all([
         songsReq, amPlaylistReq, pmPlaylistReq
     ]);
 
+    // --- DETAILED LOGGING ---
+    console.log('Raw AM Playlist Result:', JSON.stringify(amPlaylistResult)); // Log raw result
+    console.log('Raw PM Playlist Result:', JSON.stringify(pmPlaylistResult)); // Log raw result
+    // --- END DETAILED LOGGING ---
+
     if (songsResult.error) throw songsResult.error;
-    if (amPlaylistResult.error) throw amPlaylistResult.error;
-    if (pmPlaylistResult.error) throw pmPlaylistResult.error;
 
-    state.allSongs = songsResult.data || [];
-    state.filteredSongs = state.allSongs;
+    // Add specific checks for playlist results
+    if (amPlaylistResult.error) {
+        console.error("Error fetching AM Playlist ID:", amPlaylistResult.error);
+        // Decide how to handle this - maybe set state.errorMessage
+    }
+    if (pmPlaylistResult.error) {
+        console.error("Error fetching PM Playlist ID:", pmPlaylistResult.error);
+         // Decide how to handle this - maybe set state.errorMessage
+    }
+    if (!amPlaylistResult.data) {
+         console.warn("AM Playlist data is null/empty for name:", SUNDAY_AM_PLAYLIST_NAME);
+    }
+     if (!pmPlaylistResult.data) {
+         console.warn("PM Playlist data is null/empty for name:", SUNDAY_PM_PLAYLIST_NAME);
+    }
 
-    // Store the fetched IDs
+    // Assign to state
     state.sundayAmPlaylistId = amPlaylistResult.data?.id || null;
     state.sundayPmPlaylistId = pmPlaylistResult.data?.id || null;
-    console.log('LOADED - State AM ID:', state.sundayAmPlaylistId); // <-- ADD THIS
-    console.log('LOADED - State PM ID:', state.sundayPmPlaylistId); // <-- ADD THIS
+
+    console.log('LOADED - State AM ID set to:', state.sundayAmPlaylistId); // Log assigned value
+    console.log('LOADED - State PM ID set to:', state.sundayPmPlaylistId); // Log assigned value
+    console.log('LOADED - State object after ID assignment:', JSON.stringify(state)); // Log state
 
     // 3. Fetch songs for each Sunday playlist IF the playlist ID was found
     const sundaySongsReqs = [];
