@@ -93,12 +93,16 @@ async function loadPageData(currentUser) {
         songsReq, amPlaylistReq, pmPlaylistReq
     ]);
 
+    // ...
+    if (songsResult.error) throw songsResult.error;
+    state.allSongs = songsResult.data || [];
+    console.log('Fetched allSongs:', JSON.stringify(state.allSongs)); // <-- ADD THIS LOG
+    // ... rest of the code assigning playlist IDs etc. ...
+
     // --- DETAILED LOGGING ---
     console.log('Raw AM Playlist Result:', JSON.stringify(amPlaylistResult)); // Log raw result
     console.log('Raw PM Playlist Result:', JSON.stringify(pmPlaylistResult)); // Log raw result
     // --- END DETAILED LOGGING ---
-
-    if (songsResult.error) throw songsResult.error;
 
     // Add specific checks for playlist results
     if (amPlaylistResult.error) {
