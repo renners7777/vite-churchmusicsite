@@ -498,7 +498,28 @@ export function SongsPage(currentUser) {
          return `<div class="bg-red-100 text-red-700 p-4 rounded" role="alert">${state.errorMessage}</div>`;
       }
 
+      // --- ADD VIDEO MODAL LOGIC ---
+      const videoModalHtml = state.activeVideoId ? `
+        <div id="video-modal" class="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50" data-action="close-modal">
+          <div class="bg-white p-4 rounded-lg shadow-xl relative max-w-3xl w-full">
+            <button class="absolute top-2 right-2 text-black text-2xl leading-none hover:text-gray-700" data-action="close-modal" aria-label="Close video player">&times;</button>
+            <div class="aspect-w-16 aspect-h-9">
+              <iframe
+                src="https://www.youtube.com/embed/${state.activeVideoId}?autoplay=1"
+                frameborder="0"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                allowfullscreen
+                class="w-full h-full"
+                title="YouTube video player">
+              </iframe>
+            </div>
+          </div>
+        </div>
+      ` : '';
+      // --- END VIDEO MODAL LOGIC ---
+
       return `
+        ${videoModalHtml}
         <section class="container mx-auto p-4" aria-labelledby="songs-page-heading">
           <div class="flex justify-between items-center mb-8">
             <h1 id="songs-page-heading" class="text-3xl font-bold">Worship Songs</h1>
@@ -559,6 +580,10 @@ export function SongsPage(currentUser) {
 
 // --- Event Handlers ---
 function handlePageClick(event, currentUser) {
+  // Log state IDs immediately upon click
+  console.log('CLICK START - State AM ID:', state.sundayAmPlaylistId); // <-- ADD THIS
+  console.log('CLICK START - State PM ID:', state.sundayPmPlaylistId); // <-- ADD THIS
+
   const target = event.target;
   const action = target.closest('[data-action]')?.dataset.action;
   const songId = target.closest('[data-song-id]')?.dataset.songId;
@@ -614,6 +639,11 @@ function handlePageKeyDown(event) {
 // --- Initialization ---
 function initializeSongsPageHandlers(currentUser) {
     console.log('initializeSongsPageHandlers: Attaching listeners'); // Log
+
+    // Log state IDs right before attaching the click handler
+    console.log('INIT HANDLERS - State AM ID:', state.sundayAmPlaylistId); // <-- ADD THIS
+    console.log('INIT HANDLERS - State PM ID:', state.sundayPmPlaylistId); // <-- ADD THIS
+
     // --- Initialization Logic Note ---
     // Event listeners are removed and re-added here because the entire
     // container's innerHTML is replaced on each update, destroying
