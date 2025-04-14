@@ -149,6 +149,12 @@ CREATE POLICY select_sunday_playlists ON sunday_playlists
     FOR SELECT
     USING (true);
 
+-- Policy to allow public read access to sunday_playlists
+CREATE POLICY "Allow public read access"
+ON public.sunday_playlists
+FOR SELECT
+USING (true);
+
 -- Create function to add song to playlist or sunday playlist
 CREATE OR REPLACE FUNCTION add_song_to_playlist(
     song_id UUID,
