@@ -1,177 +1,92 @@
 /*
-# Create songs table for church music website
+# Setup for Church Music Website Tables and RLS
 
-1. New Tables
-- `songs`
-- `id` (uuid, primary key)
-- `title` (text, required)
-- `author` (text)
-- `youtube_url` (text)
-- `created_at` (timestamp with timezone)
+1. Tables Created/Managed:
+   - `songs`: Stores song details.
+   - `sunday_playlists`: Defines the main Sunday service playlists (e.g., Morning, Evening).
+   - `sunday_playlist_songs`: Links songs to the Sunday playlists (join table).
 
-- `playlists`
-- `id` (uuid, primary key)
-- `name` (text, required)
-- `description` (text)
-- `created_at` (timestamp with timezone)
-- `updated_at` (timestamp with timezone)
-
-- `playlist_songs`
-- `id` (uuid, primary key)
-- `playlist_id` (uuid, foreign key to playlists.id)
-- `song_id` (uuid, foreign key to songs.id)
-- `created_at` (timestamp with timezone)
-- `updated_at` (timestamp with timezone)
-
-- `sunday_playlists`
-- `id` (uuid, primary key)
-- `song_id` (uuid, foreign key to songs.id)
-- `service_type` (text, required, check constraint for 'morning' or 'evening')
-- `created_at` (timestamp with timezone)
-
-3. Security
-
-- Enable RLS on `songs` table
-- Add policies for:
-- Anyone can read songs
-- Only certain users can insert, update, delete
-
-- Enable RLS on `sunday_playlists` table
-- Add policies for:
-- Anyone can read sunday_playlists
-- Only certain users can insert, update, delete
-
-`playlists`
-- Enable RLS on `playlists` table
-- Add policies for:
-- Anyone can insert playlists
-- Anyone can read playlists
-- Anyone can update playlists
-- Anyone can delete playlists
-
-`playlist_songs`
-- Enable RLS on `playlist_songs` table
-- Add policies for:
-- Authenticated users can insert playlist_songs
-- Authenticated users can update playlist_songs
-- Authenticated users can delete playlist_songs
-- Anyone can read playlist_songs
+2. Row Level Security (RLS):
+   - Enabled on all three tables.
+   - Policies:
+     - Anyone can read (`SELECT`) data from all tables.
+     - Only authenticated users can modify (`INSERT`, `UPDATE`, `DELETE`) data in all tables.
 */
 
--- Create songs table
-CREATE TABLE songs (
+-- 1. Create `songs` table
+CREATE TABLE IF NOT EXISTS public.songs (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     title TEXT NOT NULL,
     author TEXT,
     youtube_url TEXT,
-    created_at TIMESTAMPTZ DEFAULT now()
-);
-
--- Create playlists table
-CREATE TABLE playlists (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    name TEXT NOT NULL,
-    description TEXT,
     created_at TIMESTAMPTZ DEFAULT now(),
-    updated_at TIMESTAMPTZ DEFAULT now()
+    created_by UUID REFERENCES auth.users(id), -- Added based on schema image
+    updated_by UUID REFERENCES auth.users(id)  -- Added based on schema image
 );
+COMMENT ON TABLE public.songs IS 'Stores details about each worship song.';
 
--- Create playlist_songs table
-CREATE TABLE playlist_songs (
+-- 2. Create `sunday_playlists` table
+CREATE TABLE IF NOT EXISTS public.sunday_playlists (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    playlist_id UUID REFERENCES playlists(id) ON DELETE CASCADE,
-    song_id UUID REFERENCES songs(id) ON DELETE CASCADE,
-    created_at TIMESTAMPTZ DEFAULT now(),
-    updated_at TIMESTAMPTZ DEFAULT now()
+    name TEXT NOT NULL UNIQUE, -- Changed from service_type, added UNIQUE
+    description TEXT,          -- Added based on schema image
+    user_id UUID REFERENCES auth.users(id), -- Added based on schema image (assuming this links to creator/owner)
+    created_at TIMESTAMPTZ DEFAULT now() -- Kept created_at, removed incorrect song_id
 );
+COMMENT ON TABLE public.sunday_playlists IS 'Defines the main Sunday service playlists (e.g., Morning, Evening).';
 
-ALTER TABLE playlist_songs
-ADD CONSTRAINT fk_playlist
-FOREIGN KEY (playlist_id)
-REFERENCES playlists(id)
-ON DELETE CASCADE;
-
-ALTER TABLE playlist_songs
-ADD CONSTRAINT fk_song
-FOREIGN KEY (song_id)
-REFERENCES songs(id)
-ON DELETE CASCADE;
-
--- Create sunday_playlists table
-CREATE TABLE sunday_playlists (
+-- 3. Create `sunday_playlist_songs` table (Join Table)
+CREATE TABLE IF NOT EXISTS public.sunday_playlist_songs (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    song_id UUID REFERENCES songs(id) ON DELETE CASCADE,
-    service_type TEXT NOT NULL CHECK (service_type IN ('morning', 'evening')),
-    created_at TIMESTAMPTZ DEFAULT now()
+    -- Corrected foreign key reference to sunday_playlists.id
+    sunday_playlist_id UUID NOT NULL REFERENCES public.sunday_playlists(id) ON DELETE CASCADE,
+    song_id UUID NOT NULL REFERENCES public.songs(id) ON DELETE CASCADE,
+    position INTEGER, -- Changed to nullable based on schema image, removed NOT NULL
+    created_at TIMESTAMPTZ DEFAULT now() -- Added created_at for consistency
 );
+COMMENT ON TABLE public.sunday_playlist_songs IS 'Links songs to specific Sunday playlists.';
+-- Add indexes for performance on foreign keys
+CREATE INDEX IF NOT EXISTS idx_sunday_playlist_songs_playlist_id ON public.sunday_playlist_songs(sunday_playlist_id);
+CREATE INDEX IF NOT EXISTS idx_sunday_playlist_songs_song_id ON public.sunday_playlist_songs(song_id);
 
--- Enable RLS on songs table
-ALTER TABLE songs ENABLE ROW LEVEL SECURITY;
 
--- Add RLS policies for songs table
-CREATE POLICY select_songs ON songs
-    FOR SELECT
-    USING (true);
+-- 4. Enable RLS for all tables
+ALTER TABLE public.songs ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.sunday_playlists ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.sunday_playlist_songs ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY modify_songs ON songs
-    FOR INSERT, UPDATE, DELETE
-    USING (auth.role() = 'admin');
 
--- Enable RLS on playlists table
-ALTER TABLE playlists ENABLE ROW LEVEL SECURITY;
+-- 5. Define RLS Policies
 
--- Add RLS policies for playlists table
-CREATE POLICY select_playlists ON playlists
-    FOR SELECT
-    USING (true);
+-- Policies for `songs` table
+DROP POLICY IF EXISTS "Allow public read access" ON public.songs;
+CREATE POLICY "Allow public read access" ON public.songs
+    FOR SELECT USING (true);
 
-CREATE POLICY modify_playlists ON playlists
-    FOR INSERT, UPDATE, DELETE
-    USING (auth.role() = 'admin');
+DROP POLICY IF EXISTS "Allow authenticated modifications" ON public.songs;
+CREATE POLICY "Allow authenticated modifications" ON public.songs
+    FOR INSERT, UPDATE, DELETE USING (auth.role() = 'authenticated');
 
--- Enable RLS on playlist_songs table
-ALTER TABLE playlist_songs ENABLE ROW LEVEL SECURITY;
+-- Policies for `sunday_playlists` table
+DROP POLICY IF EXISTS "Allow public read access" ON public.sunday_playlists;
+CREATE POLICY "Allow public read access" ON public.sunday_playlists
+    FOR SELECT USING (true);
 
--- Add RLS policies for playlist_songs table
-CREATE POLICY select_playlist_songs ON playlist_songs
-    FOR SELECT
-    USING (true);
+DROP POLICY IF EXISTS "Allow authenticated modifications" ON public.sunday_playlists;
+CREATE POLICY "Allow authenticated modifications" ON public.sunday_playlists
+    FOR INSERT, UPDATE, DELETE USING (auth.role() = 'authenticated');
 
-CREATE POLICY modify_playlist_songs ON playlist_songs
-    FOR INSERT, UPDATE, DELETE
-    USING (auth.role() = 'authenticated');
+-- Policies for `sunday_playlist_songs` table
+DROP POLICY IF EXISTS "Allow public read access" ON public.sunday_playlist_songs;
+CREATE POLICY "Allow public read access" ON public.sunday_playlist_songs
+    FOR SELECT USING (true);
 
--- Enable RLS on sunday_playlists table
-ALTER TABLE sunday_playlists ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Allow authenticated modifications" ON public.sunday_playlist_songs;
+CREATE POLICY "Allow authenticated modifications" ON public.sunday_playlist_songs
+    FOR INSERT, UPDATE, DELETE USING (auth.role() = 'authenticated');
 
--- Add RLS policies for sunday_playlists table
-CREATE POLICY select_sunday_playlists ON sunday_playlists
-    FOR SELECT
-    USING (true);
 
--- Policy to allow public read access to sunday_playlists
-CREATE POLICY "Allow public read access"
-ON public.sunday_playlists
-FOR SELECT
-USING (true);
+-- 6. Remove incorrect function (Client-side handles adding songs to playlists)
+DROP FUNCTION IF EXISTS add_song_to_playlist(UUID, UUID, TEXT);
 
--- Create function to add song to playlist or sunday playlist
-CREATE OR REPLACE FUNCTION add_song_to_playlist(
-    song_id UUID,
-    playlist_id UUID DEFAULT NULL,
-    service_type TEXT DEFAULT NULL
-) RETURNS VOID AS $$
-BEGIN
-    -- Add to sunday_playlists if service_type is provided
-    IF service_type IS NOT NULL THEN
-        INSERT INTO sunday_playlists (song_id, service_type)
-        VALUES (song_id, service_type);
-    -- Add to playlists if playlist_id is provided
-    ELSE IF playlist_id IS NOT NULL THEN
-        INSERT INTO playlist_songs (playlist_id, song_id)
-        VALUES (playlist_id, song_id);
-    ELSE
-        RAISE EXCEPTION 'Either playlist_id or service_type must be provided';
-    END IF;
-END;
-$$ LANGUAGE plpgsql;
+-- End of migration script
