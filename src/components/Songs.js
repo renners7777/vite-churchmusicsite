@@ -456,8 +456,16 @@ function renderAllSongsSection(currentUser) {
 // --- Main Component Function ---
 export function SongsPage(currentUser) {
   return new Promise(async (resolve) => {
+    console.log('SongsPage: Starting'); // Log
+
+    // Ensure initial load completes before resolving the first time
     if (!state.isInitialized && !state.loading) {
-      loadPageData(currentUser);
+      console.log('SongsPage: Calling and awaiting initial loadPageData'); // Log
+      await loadPageData(currentUser); // AWAIT the initial load
+      console.log('SongsPage: Initial loadPageData finished'); // Log
+    } else if (state.loading) {
+      // Optional: If already loading, maybe wait or show loading state differently
+      console.log('SongsPage: Already loading, waiting for update event');
     }
 
     const renderContent = () => {
@@ -516,30 +524,35 @@ export function SongsPage(currentUser) {
       `;
     };
 
-    resolve(renderContent());
+    console.log('SongsPage: Resolving renderContent'); // Log
+    resolve(renderContent()); // Now resolve with potentially loaded data
 
-    // --- Rendering Efficiency Note ---
-    // The current approach uses 'innerHTML' to replace the entire content
-    // on every 'songs-page-update'. This is simple but inefficient for
-    // larger applications. It causes the whole section to re-render,
-    // potentially losing input focus or other transient UI states.
-    // A more advanced approach would involve targeted DOM manipulation
-    // (updating only the elements that changed) or using a UI library/framework.
-    // --- End Rendering Efficiency Note ---
+    // --- Event Listener Setup ---
+    // Remove previous listener first to prevent duplicates
     window.removeEventListener('songs-page-update', window._songsPageUpdateHandler);
+
     window._songsPageUpdateHandler = () => {
-        const songsContainer = document.querySelector('main'); // Assuming 'main' is the container
+        console.log('songs-page-update: Handler triggered'); // Log
+        const songsContainer = document.querySelector('main');
         if (songsContainer) {
+            console.log('songs-page-update: Rendering content'); // Log
             songsContainer.innerHTML = renderContent();
-            // Re-initialize handlers because the previous elements were destroyed
-            initializeSongsPageHandlers(currentUser);
+            console.log('songs-page-update: Re-initializing handlers'); // Log
+            initializeSongsPageHandlers(currentUser); // Re-attach handlers AFTER re-render
         }
     };
     window.addEventListener('songs-page-update', window._songsPageUpdateHandler);
 
-    // Initial setup of handlers after the first render
+    // Initial setup of handlers AFTER the first render completes
+    // Use requestAnimationFrame to ensure DOM is ready
     requestAnimationFrame(() => {
-        initializeSongsPageHandlers(currentUser);
+        // Only initialize if the page is fully initialized
+        if (state.isInitialized) {
+             console.log('SongsPage: Initializing handlers via requestAnimationFrame'); // Log
+             initializeSongsPageHandlers(currentUser);
+        } else {
+             console.log('SongsPage: Skipping initial handler init, waiting for load'); // Log
+        }
     });
   });
 }
@@ -600,12 +613,22 @@ function handlePageKeyDown(event) {
 
 // --- Initialization ---
 function initializeSongsPageHandlers(currentUser) {
+    console.log('initializeSongsPageHandlers: Attaching listeners'); // Log
     // --- Initialization Logic Note ---
     // Event listeners are removed and re-added here because the entire
     // container's innerHTML is replaced on each update, destroying
     // the old elements and their attached listeners. This is necessary
     // with the current rendering strategy but highlights its inefficiency.
     // --- End Initialization Logic Note ---
+
+    // Ensure state IDs are available before attaching handlers that depend on them
+    // This check might be redundant now due to awaiting loadPageData, but adds safety
+    if (!state.isInitialized) {
+        console.warn('initializeSongsPageHandlers called before state was initialized!');
+        return; // Don't attach if data isn't ready
+    }
+
+    // Remove existing listeners (important!)
     document.removeEventListener('click', window._songsPageClickHandler);
     document.removeEventListener('keydown', window._songsPageKeyDownHandler);
     const addForm = document.getElementById('add-song-form');
@@ -617,6 +640,7 @@ function initializeSongsPageHandlers(currentUser) {
          searchInput.removeEventListener('input', window._searchInputHandler);
      }
 
+    // Define handlers
     window._songsPageClickHandler = (event) => handlePageClick(event, currentUser);
     window._songsPageKeyDownHandler = handlePageKeyDown;
     window._addSongSubmitHandler = handleAddSongSubmit;
@@ -628,6 +652,7 @@ function initializeSongsPageHandlers(currentUser) {
         }
     };
 
+    // Add new listeners
     document.addEventListener('click', window._songsPageClickHandler);
     document.addEventListener('keydown', window._songsPageKeyDownHandler);
     if (addForm) {
@@ -636,6 +661,7 @@ function initializeSongsPageHandlers(currentUser) {
      if (searchInput) {
          searchInput.addEventListener('input', window._searchInputHandler);
      }
+    console.log('initializeSongsPageHandlers: Listeners attached'); // Log
 }
 
 window.SongsPage = SongsPage; // Ensure SongsPage is globally accessible if needed by router
