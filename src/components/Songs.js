@@ -658,13 +658,24 @@ function handlePageClick(event, currentUser) {
 
   if (currentUser) {
       if (action === 'add-to-sunday-am' && songId) {
-          console.log('CLICK AM - State AM ID:', state.sundayAmPlaylistId); // <-- ADD THIS
-          if (!state.sundayAmPlaylistId) { /* ... error handling ... */ }
-          else { addSongToSundayPlaylist(songId, state.sundayAmPlaylistId); }
+          console.log('CLICK AM - State AM ID:', state.sundayAmPlaylistId);
+          if (!state.sundayAmPlaylistId) {
+              console.error('Cannot add to AM playlist: AM Playlist ID is null');
+              alert('Error: Could not find Sunday AM playlist.');
+          } else {
+              addSongToSundayPlaylist(songId, state.sundayAmPlaylistId);
+          }
       } else if (action === 'add-to-sunday-pm' && songId) {
-          console.log('CLICK PM - State PM ID:', state.sundayPmPlaylistId); // <-- ADD THIS
-          if (!state.sundayPmPlaylistId) { /* ... error handling ... */ }
-          else { addSongToSundayPlaylist(songId, state.sundayPmPlaylistId); }
+          console.log('CLICK PM - State PM ID:', state.sundayPmPlaylistId);
+          if (!state.sundayPmPlaylistId) {
+              console.error('Cannot add to PM playlist: PM Playlist ID is null');
+              alert('Error: Could not find Sunday PM playlist.');
+          } else {
+              addSongToSundayPlaylist(songId, state.sundayPmPlaylistId);
+          }
+      } else if (action === 'remove-from-sunday' && songId && playlistId) {
+          console.log(`CLICK REMOVE - Song ID: ${songId}, Playlist ID: ${playlistId}`); // Log the IDs being used
+          removeSongFromSundayPlaylist(songId, playlistId); // Call the remove function
       }
   }
 }
