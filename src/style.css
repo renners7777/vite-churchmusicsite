@@ -128,3 +128,23 @@ body {
 .search-input {
   @apply block w-full pl-12 pr-10 py-3 text-gray-900 placeholder-gray-500 border-none rounded-lg focus:outline-none focus:ring-0 sm:text-sm;
 }
+
+.back-to-top-btn {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  padding: 10px 15px;
+  border-radius: 5px;
+  background-color: #007bff;
+  color: white;
+  border: none;
+  cursor: pointer;
+  opacity: 1;
+  transition: opacity 0.3s ease-in-out;
+  z-index: 1000; 
+}
+
+.back-to-top-btn.hidden {
+  opacity: 0;
+  pointer-events: none; 
+}
