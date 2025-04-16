@@ -38,6 +38,17 @@ export function Footer() {
         <div class="border-t border-gray-700 mt-8 pt-4 text-center text-gray-400">
           <p>&copy; ${new Date().getFullYear()} Chris Renshaw. All rights reserved. Built using Windsurf & Github Copilot</p>
         </div>
+        <div class="mt-4 text-center">
+          <a 
+            href="https://www.freeprivacypolicy.com/live/d6477ce9-e5df-49a3-9713-c5f6625dc56d" 
+            target="_blank" 
+            rel="noopener noreferrer" 
+            class="text-sm text-gray-400 hover:text-gray-300 transition-colors"
+            aria-label="View Privacy Policy (opens in new tab)"
+          >
+            Privacy Policy
+          </a>
+        </div>
       </div>
     </footer>
   `
