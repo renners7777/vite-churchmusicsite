@@ -36,7 +36,7 @@ export function Footer() {
           </div>
         </div>
         <div class="border-t border-gray-700 mt-8 pt-4 text-center text-gray-400">
-          <p>&copy; ${new Date().getFullYear()} Windsurf by Chris Renshaw. All rights reserved.</p>
+          <p>&copy; ${new Date().getFullYear()} Chris Renshaw. All rights reserved. Built using Windsurf & Github Copilot</p>
         </div>
       </div>
     </footer>
