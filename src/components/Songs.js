@@ -691,6 +691,48 @@ function handlePageKeyDown(event) {
     }
 }
 
+// --- Back to Top Button ---
+function setupBackToTopButton() {
+  // Check if the button already exists to prevent duplicates
+  if (document.getElementById('back-to-top')) {
+    return;
+  }
+
+  // Add a "Back to Top" button
+  const backToTopButton = document.createElement('button');
+  backToTopButton.id = 'back-to-top';
+  backToTopButton.className = 'fixed bottom-4 right-4 p-3 bg-blue-600 text-white rounded-full shadow-lg hidden z-40'; // Added z-index
+  backToTopButton.innerHTML = '⬆️';
+  backToTopButton.setAttribute('aria-label', 'Back to Top');
+  document.body.appendChild(backToTopButton);
+}
+
+  // Add click listener to the button
+  backToTopButton.addEventListener('click', () => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  });
+
+  // Show or hide the button based on scroll position
+  window.addEventListener('scroll', () => {
+    // Ensure the button still exists in the DOM before trying to access it
+    const btn = document.getElementById('back-to-top');
+    if (btn) {
+        if (window.scrollY > 300) {
+          btn.classList.remove('hidden');
+        } else {
+          btn.classList.add('hidden');
+        }
+    }
+  });
+
+// Run the setup function once the DOM is ready
+if (document.readyState === 'loading') { // Loading hasn't finished yet
+  document.addEventListener('DOMContentLoaded', setupBackToTopButton);
+} else { // `DOMContentLoaded` has already fired
+  setupBackToTopButton();
+}
+
+
 // --- Initialization ---
 function initializeSongsPageHandlers(currentUser) {
     console.log('initializeSongsPageHandlers: Attaching listeners'); // Log
