@@ -10,7 +10,7 @@
    - Enabled on all three tables.
    - Policies:
      - Anyone can read (`SELECT`) data from all tables.
-     - Only authenticated users can modify (`INSERT`, `UPDATE`, `DELETE`) data in all tables.
+     - Only users identified as 'admin' via public.is_admin() can modify (`INSERT`, `UPDATE`, `DELETE`) data.
 */
 
 -- 1. Create `songs` table
@@ -59,52 +59,84 @@ ALTER TABLE public.sunday_playlist_songs ENABLE ROW LEVEL SECURITY;
 -- 5. Define RLS Policies
 
 -- Policies for `songs` table
-DROP POLICY IF EXISTS "Allow public read access" ON public.songs;
-CREATE POLICY "Allow public read access" ON public.songs
+-- Drop old/incorrect policies first
+DROP POLICY IF EXISTS "Allow authenticated modifications" ON public.songs;
+DROP POLICY IF EXISTS "Allow authenticated insert on songs" ON public.songs;
+DROP POLICY IF EXISTS "Allow authenticated update on songs" ON public.songs;
+DROP POLICY IF EXISTS "Allow authenticated delete on songs" ON public.songs;
+-- Drop new policies in case of re-run
+DROP POLICY IF EXISTS "Allow public read access on songs" ON public.songs;
+DROP POLICY IF EXISTS "Allow admin insert on songs" ON public.songs;
+DROP POLICY IF EXISTS "Allow admin update on songs" ON public.songs;
+DROP POLICY IF EXISTS "Allow admin delete on songs" ON public.songs;
+
+-- Allow public read access
+CREATE POLICY "Allow public read access on songs" ON public.songs
     FOR SELECT USING (true);
 
-DROP POLICY IF EXISTS "Allow authenticated modifications" ON public.songs;
-CREATE POLICY "Allow authenticated modifications" ON public.songs
-    FOR INSERT, UPDATE, DELETE USING (auth.role() = 'authenticated');
+-- Allow ONLY admins to insert
+CREATE POLICY "Allow admin insert on songs" ON public.songs
+    FOR INSERT TO authenticated WITH CHECK (public.is_admin());
 
--- Create separate policies for INSERT, UPDATE, DELETE on public.songs
+-- Allow ONLY admins to update
+CREATE POLICY "Allow admin update on songs" ON public.songs
+    FOR UPDATE TO authenticated USING (public.is_admin()) WITH CHECK (public.is_admin());
 
--- Policy for INSERT
-CREATE POLICY "Allow authenticated insert on songs" ON public.songs
-    FOR INSERT
-    TO authenticated
-    WITH CHECK (true); -- Or specific check like auth.role() = 'authenticated' if needed
+-- Allow ONLY admins to delete
+CREATE POLICY "Allow admin delete on songs" ON public.songs
+    FOR DELETE TO authenticated USING (public.is_admin());
 
--- Policy for UPDATE
-CREATE POLICY "Allow authenticated update on songs" ON public.songs
-    FOR UPDATE
-    TO authenticated
-    USING (true) -- Condition for which rows can be updated
-    WITH CHECK (true); -- Condition for the new data
-
--- Policy for DELETE
-CREATE POLICY "Allow authenticated delete on songs" ON public.songs
-    FOR DELETE
-    TO authenticated
-    USING (true); -- Condition for which rows can be deleted
 
 -- Policies for `sunday_playlists` table
-DROP POLICY IF EXISTS "Allow public read access" ON public.sunday_playlists;
-CREATE POLICY "Allow public read access" ON public.sunday_playlists
+-- Drop old/incorrect policies first
+DROP POLICY IF EXISTS "Allow authenticated modifications" ON public.sunday_playlists;
+-- Drop new policies in case of re-run
+DROP POLICY IF EXISTS "Allow public read access on sunday_playlists" ON public.sunday_playlists;
+DROP POLICY IF EXISTS "Allow admin insert on sunday_playlists" ON public.sunday_playlists;
+DROP POLICY IF EXISTS "Allow admin update on sunday_playlists" ON public.sunday_playlists;
+DROP POLICY IF EXISTS "Allow admin delete on sunday_playlists" ON public.sunday_playlists;
+
+-- Allow public read access
+CREATE POLICY "Allow public read access on sunday_playlists" ON public.sunday_playlists
     FOR SELECT USING (true);
 
-DROP POLICY IF EXISTS "Allow authenticated modifications" ON public.sunday_playlists;
-CREATE POLICY "Allow authenticated modifications" ON public.sunday_playlists
-    FOR INSERT, UPDATE, DELETE USING (auth.role() = 'authenticated');
+-- Allow ONLY admins to insert
+CREATE POLICY "Allow admin insert on sunday_playlists" ON public.sunday_playlists
+    FOR INSERT TO authenticated WITH CHECK (public.is_admin());
+
+-- Allow ONLY admins to update
+CREATE POLICY "Allow admin update on sunday_playlists" ON public.sunday_playlists
+    FOR UPDATE TO authenticated USING (public.is_admin()) WITH CHECK (public.is_admin());
+
+-- Allow ONLY admins to delete
+CREATE POLICY "Allow admin delete on sunday_playlists" ON public.sunday_playlists
+    FOR DELETE TO authenticated USING (public.is_admin());
+
 
 -- Policies for `sunday_playlist_songs` table
-DROP POLICY IF EXISTS "Allow public read access" ON public.sunday_playlist_songs;
-CREATE POLICY "Allow public read access" ON public.sunday_playlist_songs
+-- Drop old/incorrect policies first
+DROP POLICY IF EXISTS "Allow authenticated modifications" ON public.sunday_playlist_songs;
+-- Drop new policies in case of re-run
+DROP POLICY IF EXISTS "Allow public read access on sunday_playlist_songs" ON public.sunday_playlist_songs;
+DROP POLICY IF EXISTS "Allow admin insert on sunday_playlist_songs" ON public.sunday_playlist_songs;
+DROP POLICY IF EXISTS "Allow admin update on sunday_playlist_songs" ON public.sunday_playlist_songs;
+DROP POLICY IF EXISTS "Allow admin delete on sunday_playlist_songs" ON public.sunday_playlist_songs;
+
+-- Allow public read access
+CREATE POLICY "Allow public read access on sunday_playlist_songs" ON public.sunday_playlist_songs
     FOR SELECT USING (true);
 
-DROP POLICY IF EXISTS "Allow authenticated modifications" ON public.sunday_playlist_songs;
-CREATE POLICY "Allow authenticated modifications" ON public.sunday_playlist_songs
-    FOR INSERT, UPDATE, DELETE USING (auth.role() = 'authenticated');
+-- Allow ONLY admins to insert
+CREATE POLICY "Allow admin insert on sunday_playlist_songs" ON public.sunday_playlist_songs
+    FOR INSERT TO authenticated WITH CHECK (public.is_admin());
+
+-- Allow ONLY admins to update
+CREATE POLICY "Allow admin update on sunday_playlist_songs" ON public.sunday_playlist_songs
+    FOR UPDATE TO authenticated USING (public.is_admin()) WITH CHECK (public.is_admin());
+
+-- Allow ONLY admins to delete
+CREATE POLICY "Allow admin delete on sunday_playlist_songs" ON public.sunday_playlist_songs
+    FOR DELETE TO authenticated USING (public.is_admin());
 
 
 -- 6. Remove incorrect function (Client-side handles adding songs to playlists)
