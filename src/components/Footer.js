@@ -43,7 +43,7 @@ export function Footer() {
             href="https://www.freeprivacypolicy.com/live/d6477ce9-e5df-49a3-9713-c5f6625dc56d" 
             target="_blank" 
             rel="noopener noreferrer" 
-            class="text-sm text-gray-400 hover:text-gray-300 transition-colors"
+            class="text-sm text-blue-300 underline hover:text-blue-400 hover:no-underline transition-colors"
             aria-label="View Privacy Policy (opens in new tab)"
           >
             Privacy Policy
