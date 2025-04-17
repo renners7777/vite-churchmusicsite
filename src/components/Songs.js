@@ -546,8 +546,8 @@ export function SongsPage(currentUser) {
       // --- ADD VIDEO MODAL LOGIC ---
       const videoModalHtml = state.activeVideoId ? `
         <div id="video-modal" class="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50" data-action="close-modal">
-          <div class="bg-white p-4 rounded-lg shadow-xl relative max-w-3xl w-full">
-            <button class="absolute top-2 right-2 text-black text-2xl leading-none hover:text-gray-700" data-action="close-modal" aria-label="Close video player">&times;</button>
+          <div class="bg-white rounded-lg shadow-xl relative max-w-3xl w-full overflow-hidden">
+            <button class="absolute top-2 right-2 text-black bg-white bg-opacity-50 rounded-full p-1 leading-none hover:text-gray-700 z-10" data-action="close-modal" aria-label="Close video player">&times;</button>
             <div class="aspect-w-16 aspect-h-9">
               <iframe
                 src="https://www.youtube.com/embed/${state.activeVideoId}?autoplay=1"
