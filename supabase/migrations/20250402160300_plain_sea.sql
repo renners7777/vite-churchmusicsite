@@ -67,6 +67,27 @@ DROP POLICY IF EXISTS "Allow authenticated modifications" ON public.songs;
 CREATE POLICY "Allow authenticated modifications" ON public.songs
     FOR INSERT, UPDATE, DELETE USING (auth.role() = 'authenticated');
 
+-- Create separate policies for INSERT, UPDATE, DELETE on public.songs
+
+-- Policy for INSERT
+CREATE POLICY "Allow authenticated insert on songs" ON public.songs
+    FOR INSERT
+    TO authenticated
+    WITH CHECK (true); -- Or specific check like auth.role() = 'authenticated' if needed
+
+-- Policy for UPDATE
+CREATE POLICY "Allow authenticated update on songs" ON public.songs
+    FOR UPDATE
+    TO authenticated
+    USING (true) -- Condition for which rows can be updated
+    WITH CHECK (true); -- Condition for the new data
+
+-- Policy for DELETE
+CREATE POLICY "Allow authenticated delete on songs" ON public.songs
+    FOR DELETE
+    TO authenticated
+    USING (true); -- Condition for which rows can be deleted
+
 -- Policies for `sunday_playlists` table
 DROP POLICY IF EXISTS "Allow public read access" ON public.sunday_playlists;
 CREATE POLICY "Allow public read access" ON public.sunday_playlists
