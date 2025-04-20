@@ -295,8 +295,8 @@ function renderAddSongForm() {
             <input type="text" id="add-author" required class="input" aria-label="Song author"/>
           </div>
           <div>
-            <label for="add-youtube-url" class="block text-sm font-medium text-gray-700">YouTube URL (Optional)</label>
-            <input type="url" id="add-youtube-url" class="input" aria-label="YouTube URL" pattern="https?://.*" title="Please enter a valid URL starting with http:// or https://"/>
+            <label for="add-youtube-url" class="block text-sm font-medium text-gray-700">YouTube URL</label>
+            <input type="url" id="add-youtube-url" required class="input" aria-label="YouTube URL" pattern="https?://.*" title="Please enter a valid URL starting with http:// or https://"/>
           </div>
           <div class="flex justify-end space-x-3">
             <button type="button" id="cancel-add-song" class="button button-secondary" aria-label="Cancel adding song">Cancel</button>
